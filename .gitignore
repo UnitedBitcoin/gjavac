@@ -1,0 +1,15 @@
+/.idea
+/*.iml
+/logs
+/dist
+/build
+/out
+/target
+*~
+/*.test.ass
+/*.test.out
+/*.meta.json
+/*.gpc
+/result.ass
+/result.out
+
