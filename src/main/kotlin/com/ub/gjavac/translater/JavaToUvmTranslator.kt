@@ -1,9 +1,9 @@
 package com.ub.gjavac.translater
 
-import com.ub.gjavac.cecil.*
 import com.google.gson.Gson
-import com.ub.gjavac.core.*
 import com.ub.gjavac.exceptions.GjavacException
+import com.ub.gjavac.cecil.*
+import com.ub.gjavac.core.*
 import com.ub.gjavac.lib.*
 import com.ub.gjavac.utils.TranslatorUtils
 import org.objectweb.asm.Label
@@ -280,7 +280,7 @@ open class JavaToUvmTranslator {
     }
 
     fun pushIntoEvalStackTopSlot(proto: UvmProto, slotIndex: Int, i: Instruction,
-                               result: MutableList<UvmInstruction>, commentPrefix: String) {
+                                 result: MutableList<UvmInstruction>, commentPrefix: String) {
         proto.internConstantValue(1)
         var uvmInst = proto.makeInstructionLine("add %" + proto.evalStackSizeIndex + " %" + proto.evalStackSizeIndex + " const 1" + commentPrefix, i)
         uvmInst.evalStackOp = EvalStackOpEnum.AddEvalStackSize
@@ -3198,7 +3198,7 @@ open class JavaToUvmTranslator {
         return count
     }
 
-    fun checkLoctionMoveRight(originalLoc:Int, newLoc:Int, proto:UvmProto)
+    fun checkLoctionMoveRight(originalLoc:Int, newLoc:Int, proto: UvmProto)
     {
         if (newLoc < originalLoc && newLoc >= 0)
         {
@@ -3217,7 +3217,7 @@ open class JavaToUvmTranslator {
         }
     }
 
-    fun ReduceUvmInstsImp(proto:UvmProto):Int
+    fun ReduceUvmInstsImp(proto: UvmProto):Int
     {
         val notEmptyCodeInstructions:MutableList<UvmInstruction> = mutableListOf()
         for (codeInst in proto.codeInstructions)
@@ -3256,7 +3256,7 @@ open class JavaToUvmTranslator {
 
         for(gIndex in 0..(UvmInstCount - 1))
         {
-            var uvmIns:UvmInstruction = CodeInstructions[gIndex]
+            var uvmIns: UvmInstruction = CodeInstructions[gIndex]
             if (uvmIns.jvmInstruction == null)
             {
                 continue
@@ -3281,7 +3281,7 @@ open class JavaToUvmTranslator {
             }
             var ss = uvmInsstr.split(" ")
 
-            var evalOp:EvalStackOpEnum = CodeInstructions[gIndex].evalStackOp
+            var evalOp: EvalStackOpEnum = CodeInstructions[gIndex].evalStackOp
             when (evalOp)
             {
                 EvalStackOpEnum.valueOf("AddEvalStackSize")->
@@ -3350,7 +3350,7 @@ open class JavaToUvmTranslator {
                             throw GjavacException("error ReduceUvmInsts,inst count err, invalid uvm inst:" + uvmInsstr)
                         }
                         var targetSlot = ss[1]
-                        var inst:UvmInstruction
+                        var inst: UvmInstruction
                         if (affectedSlot.startsWith("%"))
                         {
                             inst = proto.makeInstructionLine("move " + targetSlot + " " + affectedSlot + commentPrefix + ";get from slot", uvmIns.jvmInstruction)
@@ -3454,7 +3454,7 @@ open class JavaToUvmTranslator {
         return delcount
     }
 
-    fun ReduceProtoUvmInsts(proto:UvmProto)
+    fun ReduceProtoUvmInsts(proto: UvmProto)
     {
         print("begin reduce: proto name = " + proto.name + " totalLines = " + proto.codeInstructions.count() + "\n")
         var r:Int = 0

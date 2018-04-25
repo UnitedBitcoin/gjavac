@@ -113,7 +113,7 @@ class ClassDefinitionReader {
         val myClassVisitor = DefinitionReaderClassVisitor(clsReader.className, this, traceClassVisitor)
         clsReader.accept(myClassVisitor, ClassReader.EXPAND_FRAMES)
         val classDef = curClassDefinition
-        if(classDef!=null) {
+        if (classDef != null) {
           classDef.interfaces.addAll(clsReader.interfaces)
           classDef.superClassName = clsReader.superName.replace("/", ".")
           module.classes.add(classDef)

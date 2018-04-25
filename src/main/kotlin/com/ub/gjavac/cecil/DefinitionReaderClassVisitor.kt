@@ -20,7 +20,7 @@ class DefinitionReaderClassVisitor (val clsName: String, val definitionReader: C
   override fun visitField(access: Int, name: String, desc: String,
                           signature: String?, value: Any?): FieldVisitor? {
     val field = FieldDefinition(name, access and Opcodes.ACC_PUBLIC == Opcodes.ACC_PUBLIC,
-      access and Opcodes.ACC_STATIC == Opcodes.ACC_STATIC, decodeFromTypeSignature(desc))
+            access and Opcodes.ACC_STATIC == Opcodes.ACC_STATIC, decodeFromTypeSignature(desc))
     classDef.fields.add(field)
     return null
   }

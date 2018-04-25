@@ -23,13 +23,13 @@ fun decodeFromTypeSignature(signature: String): TypeInfo {
         throw DecodeException("type signature error " + signature)
       }
       val typeStr = signature.substring(1, semicolonPos)
-      ReferenceTypeInfo("L" + typeStr + ";", typeStr)
+        ReferenceTypeInfo("L" + typeStr + ";", typeStr)
     }
     'B', 'C', 'D', 'F', 'I', 'J', 'G', 'Z', 'V' -> TypeInfo("" + signature[0], true, false)
     '[' -> {
       // read array
       val subTypeInfo = decodeFromTypeSignature(signature.substring(1))
-      ArrayTypeInfo("[" + subTypeInfo.signature, subTypeInfo)
+        ArrayTypeInfo("[" + subTypeInfo.signature, subTypeInfo)
     }
     '(' -> {
       var pos = 1

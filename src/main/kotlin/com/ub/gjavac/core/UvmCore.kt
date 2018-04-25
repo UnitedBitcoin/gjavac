@@ -6,7 +6,7 @@ import com.ub.gjavac.exceptions.GjavacException
 
 open class UvmInstruction(val asmLine: String, var lineNumber: Int = 0, var jvmInstruction: Instruction? = null) {
     var locationLabel: String? = null
-    var evalStackOp:EvalStackOpEnum = EvalStackOpEnum.NotEvalStackOp  //add by zq
+    var evalStackOp: EvalStackOpEnum = EvalStackOpEnum.NotEvalStackOp  //add by zq
     override fun toString(): String {
         return asmLine
     }

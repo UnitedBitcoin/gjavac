@@ -1,4 +1,4 @@
-package com.ub
+package com.ub.test
 
 class HelloTest {
 

@@ -1,12 +1,11 @@
 package com.ub
 
-import com.ub.gjavac.cecil.*
+import com.ub.gjavac.cecil.ClassDefinitionReader
 import com.ub.gjavac.lib.*
 import com.ub.gjavac.lib.UvmCoreLibs.*
 import com.ub.gjavac.translater.JavaToUvmTranslator
 import com.ub.gjavac.utils.use
 import java.io.*
-import com.ub.gjavac.lib.UvmMathModule
 import com.ub.gjavac.lib.UvmCoreLibs.importModule
 
 
@@ -347,7 +346,7 @@ fun main(args: Array<String>) {
     })
     val metaInfoJson = translator.getMetaInfoJson()
     val metaOutputfilename = "result.meta.json"
-    use(FileOutputStream(File(metaOutputfilename)), {fos ->
+    use(FileOutputStream(File(metaOutputfilename)), { fos ->
         val bw = BufferedWriter(PrintWriter(fos))
         bw.write(metaInfoJson)
         bw.flush()
