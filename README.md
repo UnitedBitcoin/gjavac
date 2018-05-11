@@ -8,9 +8,13 @@ Java and Kotlin compiler for uvm
 * Maven 3
 * only support Windows now
 
+# Examples
+
+* You can find a kotlin demo contract and a java demo contract in `gjavactestjavacontract` directory and `gjavatestkotlincontract` directory
+
 # Usage
 
-* `mvn pacakge` to generate `target/gjavac-${version}-jar-with-dependencies.jar` to generate gjavac.jar
+* `mvn pacakge` to generate `gjavac-compiler/target/gjavac-${version}-jar-with-dependencies.jar` to generate gjavac.jar
 * `gjavac.jar path-of-need-.class-files` to generate contract's assembler file(*.ass file)
 * `uvm_ass path-of-.ass-file` to generate bytecode file(*.out) and metadata file(*.meta.json)
 * `package_gpc path-of-bytecode-file path-of-metadata-json-file` to generate contract file(*.gpc)
