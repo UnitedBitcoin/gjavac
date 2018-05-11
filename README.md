@@ -1,4 +1,4 @@
-#gjavac
+# gjavac
 
 Java and Kotlin compiler for uvm
 
@@ -6,7 +6,6 @@ Java and Kotlin compiler for uvm
 
 * JDK1.8+
 * Maven 3
-* only support Windows now
 
 # Examples
 
@@ -14,6 +13,7 @@ Java and Kotlin compiler for uvm
 
 # Usage
 
+* need to add reference to `gjavac-core` as lib in you java contract project
 * `mvn pacakge` to generate `gjavac-compiler/target/gjavac-${version}-jar-with-dependencies.jar` to generate gjavac.jar
 * `gjavac.jar path-of-need-.class-files` to generate contract's assembler file(*.ass file)
 * `uvm_ass path-of-.ass-file` to generate bytecode file(*.out) and metadata file(*.meta.json)
