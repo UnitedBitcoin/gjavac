@@ -608,6 +608,12 @@ open class JavaToUvmTranslator {
                 makeLoadConstInst(proto, i, result, proto.tmp1StackTopSlotIndex, value, commentPrefix)
                 pushIntoEvalStackTopSlot(proto,proto.tmp1StackTopSlotIndex,i,result,commentPrefix + " ldc " + value)
             }
+            Opcodes.LCONST_0, Opcodes.LCONST_1 -> {
+                // push long to operand stack
+                val value = i.opCode - Opcodes.LCONST_0
+                makeLoadConstInst(proto, i, result, proto.tmp1StackTopSlotIndex, value, commentPrefix)
+                pushIntoEvalStackTopSlot(proto,proto.tmp1StackTopSlotIndex,i,result,commentPrefix + " ldc " + value)
+            }
             Opcodes.LDC -> {
                 // push const value to operand stack
                 var value = i.opArgs[0]
@@ -707,13 +713,13 @@ open class JavaToUvmTranslator {
                 // div
                 makeArithmeticInstructions(proto, "div", i, result, commentPrefix, false)
             }
-            Opcodes.LAND -> {
+            Opcodes.LAND, Opcodes.IAND -> {
                 makeArithmeticInstructions(proto, "band", i, result, commentPrefix, false)
             }
-            Opcodes.LOR -> {
+            Opcodes.LOR, Opcodes.IOR -> {
                 makeArithmeticInstructions(proto, "bor", i, result, commentPrefix, false)
             }
-            Opcodes.LXOR -> {
+            Opcodes.LXOR, Opcodes.IXOR -> {
                 makeArithmeticInstructions(proto, "bxor", i, result, commentPrefix, false)
             }
             Opcodes.IINC -> {
