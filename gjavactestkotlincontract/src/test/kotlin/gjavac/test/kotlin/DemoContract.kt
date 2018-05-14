@@ -1,9 +1,11 @@
 package gjavac.test.kotlin
 
 import gjavac.lib.*
+import gjavac.lib.UvmCoreLibs.*
 
 class Storage {
     var name: String? = null
+    var users: UvmArray<String> = UvmArray.create()
 //    var age: Int? = null
 }
 
@@ -20,11 +22,15 @@ class MyContract : UvmContract<Storage>() {
     override fun init() {
         val a: Byte = 123
         UvmCoreLibs.print("init of demo Contract " + a)
-        this.storage?.name = "my_contract" // TODO: getfield error in chain
-        UvmCoreLibs.print("storage.name changed")
+        this.storage?.name = "my_contract"
+//        debug()
+        this.storage?.users = UvmArray.create()
+        this.storage?.users?.add("abc")
+        print("storage.name changed")
         UvmCoreLibs.pprint(this.storage)
         UvmCoreLibs.print(this.storage?.name)
-//        this.storage?.age = 25 // FIXME: maybe crash
+        pprint("users " + tojsonstring(this.storage?.users))
+//        this.storage?.age = 25
     }
 
     fun sayHi(name: String): String {
@@ -151,7 +157,9 @@ class Person {
         println("$c / $b = $h")
 
         println("1 = ${UvmCoreLibs.tointeger(c)}")
+//        debug()
         println("~ ${a} = ${UvmCoreLibs.neg(a as Long)}")
+        debug()
     }
 
     fun testBooleans() {
@@ -284,15 +292,15 @@ class Person {
         UvmCoreLibs.print("hello uvm")
         val contract = MyContract()
         // don't init contract when compile to gpc, used as contract
-//        if (contract is MyContract) {
-//            print("contract is contract")
-//            print(contract.sayHi("contract-name"))
-//            contract.storage = Storage()
-//            contract.init()
-//            print("name="+contract.storage?.name)
-//            val offlineApiRes = contract.offlineGetInfo("hi")
-//            print("offline api res is $offlineApiRes")
-//        }
+        if (contract is MyContract) {
+            print("contract is contract")
+            print(contract.sayHi("contract-name"))
+            contract.storage = Storage()
+            contract.init()
+            print("name="+contract.storage?.name)
+            val offlineApiRes = contract.offlineGetInfo("hi")
+            print("offline api res is $offlineApiRes")
+        }
 
         testIf()
         testNumber()

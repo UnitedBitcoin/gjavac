@@ -80,10 +80,7 @@ open class JavaToUvmTranslator {
         if (contractTypes.size > 0) {
             this.contractType = contractTypes[0]
         }
-        val contractType_ = this.contractType
-        if (contractType_ == null) {
-            throw GjavacException("合约类型不可为空")
-        }
+        val contractType_ = this.contractType ?: throw GjavacException("合约类型不可为空")
         if (TranslatorUtils.isMainClass(contractType_)) {
             throw GjavacException("合约类型不能直接包含main方法，请另外定义一个类型包含main方法")
         }
@@ -211,10 +208,10 @@ open class JavaToUvmTranslator {
         // 满足条件，跳转到目标指令
         // 在要跳转的目标指令的前面增加 label:
         var jmpLabel = proto.name + "_to_dest_" + opName + "_" + i.offset;
-        var toJmpTooffset = toJmpToInst.offset;
+        val toJmpTooffset = toJmpToInst.offset;
         if (toJmpTooffset < i.offset) {
-            var uvmInstToJmp = proto.findUvmInstructionMappedByIlInstruction(toJmpToInst)
-            var idx = proto.indexOfUvmInstruction(uvmInstToJmp)
+            val uvmInstToJmp = proto.findUvmInstructionMappedByIlInstruction(toJmpToInst)
+            val idx = proto.indexOfUvmInstruction(uvmInstToJmp)
             if (idx < 1 && !onlyNeedResultCount) {
                 throw GjavacException("Can't find mapped instruction to jmp")
             }
@@ -275,6 +272,13 @@ open class JavaToUvmTranslator {
         result.add(uvmInst)
         proto.internConstantValue(1)
         uvmInst = proto.makeInstructionLine("sub %" + proto.evalStackSizeIndex + " %" + proto.evalStackSizeIndex + " const 1" + commentPrefix, i)
+        uvmInst.evalStackOp = EvalStackOpEnum.SubEvalStackSize
+        result.add(uvmInst)
+    }
+
+    fun subEvalStackSize(proto: UvmProto, i: Instruction, result: MutableList<UvmInstruction>, commentPrefix: String) {
+        proto.internConstantValue(1)
+        val uvmInst = proto.makeInstructionLine("sub %" + proto.evalStackSizeIndex + " %" + proto.evalStackSizeIndex + " const 1" + commentPrefix, i)
         uvmInst.evalStackOp = EvalStackOpEnum.SubEvalStackSize
         result.add(uvmInst)
     }
@@ -887,9 +891,9 @@ open class JavaToUvmTranslator {
                     return result
                 }
                 if (calledTypeName == "kotlin.jvm.internal.Intrinsics") {
-                    if (methodName == "checkParameterIsNotNull") {
-                        makeLoadConstInst(proto, i, result, proto.tmp1StackTopSlotIndex, true, commentPrefix)
-                        pushIntoEvalStackTopSlot(proto,proto.tmp1StackTopSlotIndex,i,result,commentPrefix + " checkParameterIsNotNull")
+                    if (methodName == "checkParameterIsNotNull" || methodName == "checkExpressionValueIsNotNull") {
+                        subEvalStackSize(proto, i, result, commentPrefix)
+                        subEvalStackSize(proto, i, result, commentPrefix)
                     } else if (methodName == "areEqual") {
                         // pop 2 args and push true
                         //subEvalStackSizeInstructions(proto, i, result, commentPrefix)
@@ -901,7 +905,7 @@ open class JavaToUvmTranslator {
                         makeLoadConstInst(proto, i, result, proto.tmp1StackTopSlotIndex, true, commentPrefix)
                         pushIntoEvalStackTopSlot(proto,proto.tmp1StackTopSlotIndex,i,result,commentPrefix)
                     } else {
-                        throw GjavacException("not implemented kotlink internal Intrinsics")
+                        throw GjavacException("not implemented kotlink internal Intrinsics method $methodName")
                     }
                     return result
                 }
@@ -1520,7 +1524,7 @@ open class JavaToUvmTranslator {
         proto.addInstruction(createEvalStackInst)
 
 
-        proto.evalStackSizeIndex = proto.evalStackIndex + 1; // 固定存储最新eval stack长度的slot
+        proto.evalStackSizeIndex = proto.evalStackIndex + 1 // 固定存储最新eval stack长度的slot
         proto.internConstantValue(0)
         proto.internConstantValue(1)
         proto.addInstruction(proto.makeInstructionLine("loadk %" + proto.evalStackSizeIndex + " const 0", null))

@@ -6,10 +6,7 @@ import gjavac.cecil.MethodInfo
 import gjavac.core.UvmTypeInfoEnum
 import gjavac.core.StorageValueTypes
 import gjavac.exceptions.GjavacException
-import gjavac.lib.Component
-import gjavac.lib.UvmContract
-import gjavac.lib.IUvmEventEmitter
-import gjavac.lib.Offline
+import gjavac.lib.*
 import org.apache.commons.lang3.StringEscapeUtils
 import kotlin.reflect.jvm.jvmName
 
@@ -176,12 +173,18 @@ class TranslatorUtils {
                 return StorageValueTypes.storage_value_int
             }
             if (typeFullName == "float" || typeFullName == "java.lang.Float" || typeFullName == "double" || typeFullName == "java.lang.Double") {
-                return StorageValueTypes.storage_value_number;
+                return StorageValueTypes.storage_value_number
             }
             if (typeFullName == "boolean" || typeFullName == "java.lang.Boolean") {
-                return StorageValueTypes.storage_value_bool;
+                return StorageValueTypes.storage_value_bool
             }
-            throw GjavacException("not supported storage value type $typeFullName now");
+            if(typeFullName == UvmArray::class.java.canonicalName) {
+                return StorageValueTypes.storage_value_unknown_array // TODO: more specific type
+            }
+            if(typeFullName==UvmMap::class.java.canonicalName) {
+                return StorageValueTypes.storage_value_unknown_table // TODO: more specific type
+            }
+            throw GjavacException("not supported storage value type $typeFullName now")
         }
 
         fun getStorageValueTypeFromType(typeRef: ClassDefinition): StorageValueTypes {
@@ -190,7 +193,7 @@ class TranslatorUtils {
         }
 
         fun getUvmTypeInfoFromType(typeRef: TypeInfo): UvmTypeInfoEnum {
-            var typeFullName = typeRef.fullName();
+            val typeFullName = typeRef.fullName()
             if (typeFullName == String::class.jvmName) {
                 return UvmTypeInfoEnum.LTI_STRING;
             }
@@ -203,7 +206,7 @@ class TranslatorUtils {
             if (typeFullName == "boolean" || typeFullName == "java.lang.Boolean") {
                 return UvmTypeInfoEnum.LTI_BOOL;
             }
-            throw GjavacException("not supported storage value type $typeRef now");
+            throw GjavacException("not supported storage value type $typeRef now")
         }
 
         fun escape(input: String): String {
