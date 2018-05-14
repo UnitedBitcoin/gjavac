@@ -569,7 +569,6 @@ open class JavaToUvmTranslator {
     }
 
     fun translateJvmInstruction(proto: UvmProto, i: Instruction, commentPrefix: String, onlyNeedResultCount: Boolean): MutableList<UvmInstruction> {
-        // TODO
         val result: MutableList<UvmInstruction> = mutableListOf()
         when (i.opCode) {
             Opcodes.AALOAD, Opcodes.BALOAD, Opcodes.CALOAD, Opcodes.DALOAD, Opcodes.FALOAD, Opcodes.IALOAD, Opcodes.LALOAD, Opcodes.SALOAD -> {
@@ -734,18 +733,17 @@ open class JavaToUvmTranslator {
                     result.add(proto.makeInstructionLine("add %$slotIndex %$slotIndex const ${proto.tmp1StackTopSlotIndex}" + commentPrefix, i))
                 }
             }
-            Opcodes.DCMPG, Opcodes.FCMPG, Opcodes.DCMPL, Opcodes.FCMPL -> {
+            Opcodes.DCMPG, Opcodes.FCMPG, Opcodes.DCMPL, Opcodes.FCMPL, Opcodes.LCMP -> {
                 // compare double
                 // operand stack: ..., value1, value2 -> operand stack: ..., result
                 // when <t>cmpg, if value1 > value2, then result = 1; else if value 1 == value2, then result = 0; else result = -1
-                // TODO
                 val op: String
-                if (i.opCode == Opcodes.DCMPG || i.opCode == Opcodes.FCMPG) {
+                if (i.opCode == Opcodes.DCMPG || i.opCode == Opcodes.FCMPG || i.opCode==Opcodes.LCMP) {
                     op = "gt"
                 } else if (i.opCode == Opcodes.DCMPL || i.opCode == Opcodes.FCMPL) {
                     op = "lt"
                 } else {
-                    throw GjavacException("not supported opcode now " + i.opCodeName())
+                    throw GjavacException("not supported opcode now ${i.opCodeName()}:L${i.linenumber}")
                 }
 
                 popFromEvalStackToSlot(proto,proto.tmp2StackTopSlotIndex,i,result,commentPrefix)
@@ -757,7 +755,7 @@ open class JavaToUvmTranslator {
 
                 // 注释以op="gt"为例
                 // if ((RK(B) >  RK(C)) ~= A) then pc++
-                result.add(proto.makeInstructionLine("gt 0 %" + proto.tmp1StackTopSlotIndex + " %" + proto.tmp2StackTopSlotIndex + commentPrefix, i))
+                result.add(proto.makeInstructionLine("lt 1 %" + proto.tmp1StackTopSlotIndex + " %" + proto.tmp2StackTopSlotIndex + commentPrefix, i))
                 var jmpLabel1 = proto.name + "_1_cmp_" + i.offset
                 val offsetOfLabel1 = 2 // 跳转到区分 = 还是 < 的判断
                 jmpLabel1 = proto.internNeedLocationLabel(offsetOfLabel1 + proto.notEmptyCodeInstructions().size + notEmptyUvmInstructionsCountInList(result), jmpLabel1)
@@ -900,6 +898,9 @@ open class JavaToUvmTranslator {
                     if (methodName == "checkParameterIsNotNull" || methodName == "checkExpressionValueIsNotNull") {
                         subEvalStackSize(proto, i, result, commentPrefix)
                         subEvalStackSize(proto, i, result, commentPrefix)
+                    } else if(methodName == "compare") {
+                        // TODO
+                        throw GjavacException("not implemented kotlink internal Intrinsics method $methodName:L${i.linenumber}")
                     } else if (methodName == "areEqual") {
                         // pop 2 args and push true
                         //subEvalStackSizeInstructions(proto, i, result, commentPrefix)
@@ -911,7 +912,7 @@ open class JavaToUvmTranslator {
                         makeLoadConstInst(proto, i, result, proto.tmp1StackTopSlotIndex, true, commentPrefix)
                         pushIntoEvalStackTopSlot(proto,proto.tmp1StackTopSlotIndex,i,result,commentPrefix)
                     } else {
-                        throw GjavacException("not implemented kotlink internal Intrinsics method $methodName")
+                        throw GjavacException("not implemented kotlink internal Intrinsics method $methodName:L${i.linenumber}")
                     }
                     return result
                 }
@@ -964,11 +965,11 @@ open class JavaToUvmTranslator {
                     } else if (methodName == "op_Inequality") // TODO
                     {
                         makeCompareInstructions(proto, "ne", i, result, commentPrefix)
-                        return result;
-                    } else if (methodName == "get_Length") {
-                        targetFuncName = "len";
-                        useOpcode = true;
-                        hasThis = true;
+                        return result
+                    } else if (methodName == "length") {
+                        targetFuncName = "len"
+                        useOpcode = true
+                        hasThis = true
                     } else {
                         throw GjavacException("not supported method " + calledTypeName + "::" + methodName)
                     }
@@ -1422,11 +1423,8 @@ open class JavaToUvmTranslator {
 
                 val gotoLabel = i.opArgs[0] as Label
                 val gotoInstIndex = proto.method?.offsetOfLabel(gotoLabel)
-                if (gotoInstIndex == null) throw GjavacException("Can't find position of label " + gotoLabel)
-                val toJmpToInst = proto.method?.code?.get(gotoInstIndex)
-                if (toJmpToInst == null) {
-                    throw GjavacException("goto dest line not found " + i)
-                }
+                if (gotoInstIndex == null) throw GjavacException("Can't find position of label $gotoLabel")
+                val toJmpToInst = proto.method?.code?.get(gotoInstIndex) ?: throw GjavacException("goto dest line not found $i")
 
                 popFromEvalStackToSlot(proto,proto.tmp1StackTopSlotIndex,i,result,commentPrefix)
 
@@ -1477,7 +1475,7 @@ open class JavaToUvmTranslator {
                         result.add(proto.makeInstructionLine("lt " + 0 + " %" + arg1SlotIndex + " %" + arg2SlotIndex +
                                 commentPrefix, i))
                     }
-                    else -> throw GjavacException("not supported compare type " + opType)
+                    else -> throw GjavacException("not supported compare type $opType:L${i.linenumber}")
                 }
                 // 满足相反的条件，跳转到目标指令
                 makeJmpToInstruction(proto, i, i.opCodeName(), toJmpToInst, result, commentPrefix, onlyNeedResultCount)
@@ -1491,7 +1489,7 @@ open class JavaToUvmTranslator {
         // TODO: other opcodes
             else -> {
 //                println("not supported jvm opcde ${i.opCodeName()}")
-                throw GjavacException("not supported jvm opcode " + i.opCodeName() + " to compile to uvm instruction")
+                throw GjavacException("not supported jvm opcode " + i.opCodeName() + " to compile to uvm instruction:L${i.linenumber}")
             }
         }
         return result

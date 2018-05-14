@@ -292,15 +292,15 @@ class Person {
         UvmCoreLibs.print("hello uvm")
         val contract = MyContract()
         // don't init contract when compile to gpc, used as contract
-        if (contract is MyContract) {
-            print("contract is contract")
-            print(contract.sayHi("contract-name"))
-            contract.storage = Storage()
-            contract.init()
-            print("name="+contract.storage?.name)
-            val offlineApiRes = contract.offlineGetInfo("hi")
-            print("offline api res is $offlineApiRes")
-        }
+//        if (contract is MyContract) {
+//            print("contract is contract")
+//            print(contract.sayHi("contract-name"))
+//            contract.storage = Storage()
+//            contract.init()
+//            print("name="+contract.storage?.name)
+//            val offlineApiRes = contract.offlineGetInfo("hi")
+//            print("offline api res is $offlineApiRes")
+//        }
 
         testIf()
         testNumber()
