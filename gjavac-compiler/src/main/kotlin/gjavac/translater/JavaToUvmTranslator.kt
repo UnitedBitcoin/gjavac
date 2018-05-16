@@ -10,6 +10,9 @@ import org.objectweb.asm.Label
 import org.objectweb.asm.Opcodes
 import org.objectweb.asm.Type
 
+// TODO: top level variables in kotlin
+// TODO: process of kotlink internal Intrinsics::compare
+
 open class JavaToUvmTranslator {
     val generatedInstructions: MutableList<UvmInstruction> = mutableListOf()
     val eventNames: MutableList<String> = mutableListOf()
@@ -901,6 +904,14 @@ open class JavaToUvmTranslator {
                     } else if(methodName == "compare") {
                         // TODO
                         throw GjavacException("not implemented kotlink internal Intrinsics method $methodName:L${i.linenumber}")
+                    } else if(methodName=="throwNpe") {
+                        val envSlot = proto.internUpvalue("ENV")
+                        proto.internConstantValue("error")
+                        result.add(proto.makeInstructionLine("gettabup %" + (proto.evalStackIndex + 20) + " @" + envSlot + " const \"error\"" + commentPrefix, i))
+                        result.add(proto.makeInstructionLine("move %" + (proto.evalStackIndex + 21) + " %" + proto.evalStackIndex + commentPrefix, i))
+                        result.add(proto.makeInstructionLine("call %" + (proto.evalStackIndex + 20) + " 2 1" + commentPrefix, i))
+                        result.add(proto.makeEmptyInstruction(""))
+                        return result
                     } else if (methodName == "areEqual") {
                         // pop 2 args and push true
                         //subEvalStackSizeInstructions(proto, i, result, commentPrefix)
@@ -1606,7 +1617,7 @@ open class JavaToUvmTranslator {
         val result: MutableList<UvmInstruction> = mutableListOf()
         // for debug,输出eval stack
         result.add(proto.makeEmptyInstruction("for debug eval stack"))
-        var envSlot = proto.internUpvalue("ENV")
+        val envSlot = proto.internUpvalue("ENV")
         proto.internConstantValue("pprint")
         result.add(proto.makeInstructionLine("gettabup %" + (proto.evalStackIndex + 20) + " @" + envSlot + " const \"pprint\"; for debug eval-stack", null))
         result.add(proto.makeInstructionLine("move %" + (proto.evalStackIndex + 21) + " %" + proto.evalStackIndex + ";  for debug eval-stack", null))
