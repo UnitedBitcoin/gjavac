@@ -6,6 +6,7 @@ import gjavac.exceptions.GjavacException
 
 open class UvmInstruction(val asmLine: String, var lineNumber: Int = 0, var jvmInstruction: Instruction? = null) {
     var locationLabel: String? = null
+    val args: MutableList<Any> = mutableListOf()
     var evalStackOp: EvalStackOpEnum = EvalStackOpEnum.NotEvalStackOp  //add by zq
     override fun toString(): String {
         return asmLine
@@ -30,7 +31,8 @@ enum class EvalStackOpEnum(val value:Int)
     AddEvalStackSize(1),
     SubEvalStackSize(2),
     GetEvalStackTop(3),
-    SetEvalStackTop(4)
+    SetEvalStackTop(4),
+    AddAndSetEvalStackTop(5)
 }
 
 

@@ -81,6 +81,7 @@ class Person {
         val a = 1
         val b = 2
         val c = 3
+        debug()
         if(a<b) {
             UvmCoreLibs.print("$a < $b")
         }
@@ -301,7 +302,7 @@ class Person {
 //            val offlineApiRes = contract.offlineGetInfo("hi")
 //            print("offline api res is $offlineApiRes")
 //        }
-
+        debug()
         testIf()
         testNumber()
         testWhile()
