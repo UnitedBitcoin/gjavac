@@ -202,7 +202,7 @@ class UvmProto {
 
         builder.append(".begin_upvalue\r\n")
         for (upvalue in upvalues) {
-            builder.append("\t" + (if (upvalue.instack) 1 else 0) + " " + upvalue.idx + "\r\n")
+            builder.append("\t" + (if (upvalue.instack) 1 else 0) + " " + upvalue.idx + " \"" + upvalue.name + "\"" + "\r\n")
         }
         builder.append(".end_upvalue\r\n")
 
@@ -266,7 +266,7 @@ class UvmProto {
     }
 
     fun internUpvalue(upvalueName: String): Int {
-        if (upvalueName == null || upvalueName.length < 1) {
+        if (upvalueName.length < 1) {
             throw GjavacException("upvalue名称不能为空")
         }
         if (inNotAffectMode) {
@@ -284,7 +284,7 @@ class UvmProto {
 
         // 从上级proto中查找是否存在对应的localvars，判断instack的值
         if (parent != null) {
-            var locvar = parent?.findLocvar(upvalueName)
+            val locvar = parent?.findLocvar(upvalueName)
             if (locvar != null) {
                 upvalue.instack = true
                 upvalue.name = upvalueName

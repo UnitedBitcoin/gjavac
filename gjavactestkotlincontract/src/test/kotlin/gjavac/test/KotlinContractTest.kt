@@ -17,4 +17,14 @@ class KotlinContractTest {
         val classesToCompile = arrayOf(class1, class2, class3, class4, class5)
         main(classesToCompile)
     }
+
+    @Test
+    fun testKotlinTokenContract() {
+        val class1 = "$testClassesDir/gjavac/test/kotlin/TokenContractLoader"
+        val class2 = "$testClassesDir/gjavac/test/kotlin/TokenContract"
+        val class3 = "$testClassesDir/gjavac/test/kotlin/Storage2"
+        val class4 = "$testClassesDir/gjavac/test/kotlin/Utils2"
+        val classesToCompile = arrayOf(class1, class2, class3, class4)
+        main(classesToCompile)
+    }
 }

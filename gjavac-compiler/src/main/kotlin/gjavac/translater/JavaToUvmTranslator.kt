@@ -129,6 +129,8 @@ open class JavaToUvmTranslator {
 
         // TODO: other utils types
 
+        // TODO: 把所有非main方法作为main方法的subroutine
+
         val buildResultProtos = mutableListOf<UvmProto>()
         var mainProto: UvmProto? = null
         for (typeDefinition in mainTypes) {
@@ -141,7 +143,7 @@ open class JavaToUvmTranslator {
             contractProto = translateJvmType(contractType_, jvmContentBuilder, luaAsmBuilder, false, mainProto?.findMainProto())
         }
         for (utilType in utilTypes) {
-            val proto = translateJvmType(utilType, jvmContentBuilder, luaAsmBuilder, false, contractProto ?: mainProto)
+            val proto = translateJvmType(utilType, jvmContentBuilder, luaAsmBuilder, false, contractProto)
         }
         for (proto in buildResultProtos) {
             luaAsmBuilder.append(proto.toUvmAss(true))
@@ -927,7 +929,8 @@ open class JavaToUvmTranslator {
                 val hasReturn = methodInfo.methodReturnType != null && !methodInfo.methodReturnType?.desc.equals("V")
                 var needPopFirstArg = false // 一些函数，比如import module的函数，因为用object成员函数模拟，而在uvm中是table中属性的函数，所以.net中多传了个this对象
                 var returnCount = if (hasReturn) 1 else 0
-                var isUserDefineFunc = false; // 如果是本类中要生成uvm字节码的方法，这里标记为true
+                var isUserDefineFunc = false // 如果是本类中要生成uvm字节码的方法，这里标记为true
+                var isModuleFunc = false // 是否是uvm某款的方法
                 var isUserDefinedInTableFunc = false; // 是否是模拟table的类型中的成员方法，这样的函数需要gettable取出函数再调用
                 var targetModuleName = ""; // 转成lua后对应的模块名称，比如可能转成print，也可能转成table.concat等
                 var targetFuncName = ""; // 全局方法名或模块中的方法名，或者本模块中的名称
@@ -1001,6 +1004,7 @@ open class JavaToUvmTranslator {
                         useOpcode = true
                         hasThis = false // FIXME
                         paramsCount = 2
+                        // TODO: 优化，减少StringBuilder的使用
                     } else {
                         throw GjavacException("not supported method " + calledTypeName + "::" + methodName)
                     }
@@ -1200,6 +1204,7 @@ open class JavaToUvmTranslator {
                     // string module's function
                     targetFuncName = UvmStringModule.libContent[methodName] ?: methodName
                     isUserDefineFunc = true
+                    isModuleFunc = true
                     isUserDefinedInTableFunc = true
                     needPopFirstArg = true
                     hasThis = false
@@ -1207,6 +1212,7 @@ open class JavaToUvmTranslator {
                     // math module's function
                     targetFuncName = methodName
                     isUserDefineFunc = true
+                    isModuleFunc = true
                     isUserDefinedInTableFunc = true
                     needPopFirstArg = true
                     hasThis = false
@@ -1214,6 +1220,7 @@ open class JavaToUvmTranslator {
                     // table module's function
                     targetFuncName = UvmTableModule.libContent[methodName] ?: methodName
                     isUserDefineFunc = true
+                    isModuleFunc = true
                     isUserDefinedInTableFunc = true
                     needPopFirstArg = true
                     hasThis = false
@@ -1221,6 +1228,7 @@ open class JavaToUvmTranslator {
                     // json module's function
                     targetFuncName = methodName
                     isUserDefineFunc = true
+                    isModuleFunc = true
                     isUserDefinedInTableFunc = true
                     needPopFirstArg = true
                     hasThis = false
@@ -1228,6 +1236,7 @@ open class JavaToUvmTranslator {
                     // time module's function
                     targetFuncName = methodName
                     isUserDefineFunc = true
+                    isModuleFunc = true
                     isUserDefinedInTableFunc = true
                     needPopFirstArg = true
                     hasThis = false
@@ -1394,8 +1403,8 @@ open class JavaToUvmTranslator {
                     } else {
                         // 访问其他类的成员方法，需要gettable取出函数
                         var protoName = TranslatorUtils.makeProtoName(calledMethod)
-                        var funcUpvalIndex = proto.internUpvalue(protoName)
-                        proto.internConstantValue(protoName)
+//                        var funcUpvalIndex = proto.internUpvalue(protoName)
+                        proto.internConstantValue(targetFuncName)
                         if (targetFuncName == null || targetFuncName.length < 1) {
                             targetFuncName = calledMethod.name;
                         }
@@ -2007,5 +2016,7 @@ open class JavaToUvmTranslator {
         } while (r > 0)
         println("proto name = " + proto.name + " totalReduceLines = " + totalReduceLines + " , now totalLines = " + proto.codeInstructions.count() + "\n")
     }
+
+    // TODO: 所有方法作为main func的subrouting和localvar
 
 }

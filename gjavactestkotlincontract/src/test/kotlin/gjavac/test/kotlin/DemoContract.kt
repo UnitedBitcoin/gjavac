@@ -23,13 +23,15 @@ class MyContract : UvmContract<Storage>() {
         val a: Byte = 123
         UvmCoreLibs.print("init of demo Contract " + a)
         this.storage?.name = "my_contract"
-//        debug()
         this.storage?.users = UvmArray.create()
         this.storage?.users?.add("abc")
         print("storage.name changed")
         UvmCoreLibs.pprint(this.storage)
         UvmCoreLibs.print(this.storage?.name)
         pprint("users " + tojsonstring(this.storage?.users))
+
+        val utils = Utils()
+        print("2+3=" + utils.sum(2, 3))
 //        this.storage?.age = 25
     }
 
@@ -222,7 +224,7 @@ class Person {
 
     fun testMap() {
         val map1 = UvmMap.create<String>()
-        map1.set("name", "C#")
+        map1.set("name", "Java")
         map1.set("country", "China")
         UvmCoreLibs.print("map1's name is " + map1.get("name"))
         UvmCoreLibs.print("map1's country is " + map1.get("country"))
@@ -245,7 +247,7 @@ class Person {
             keyValuePair = map1PairsIter(map1, keyValuePair.first)
         }
         val table1 = map1 as UvmTable
-        UvmCoreLibs.pprint("cast C#=" + (table1 as UvmMap<String>).get("name"))
+        UvmCoreLibs.pprint("cast Java=" + (table1 as UvmMap<String>).get("name"))
     }
 
     fun testEvent() {
@@ -255,6 +257,7 @@ class Person {
     fun testModules() {
         UvmCoreLibs.print("testModules cases")
         val strModule = UvmCoreLibs.importModule(UvmStringModule::class.java, "string")
+        debug()
         val len = strModule.len("Hello")
         UvmCoreLibs.print("Hello length is $len")
 
@@ -293,15 +296,15 @@ class Person {
         UvmCoreLibs.print("hello uvm")
         val contract = MyContract()
         // don't init contract when compile to gpc, used as contract
-//        if (contract is MyContract) {
-//            print("contract is contract")
-//            print(contract.sayHi("contract-name"))
-//            contract.storage = Storage()
-//            contract.init()
-//            print("name="+contract.storage?.name)
-//            val offlineApiRes = contract.offlineGetInfo("hi")
-//            print("offline api res is $offlineApiRes")
-//        }
+        if (contract is MyContract) {
+            print("contract is contract")
+            print(contract.sayHi("contract-name"))
+            contract.storage = Storage()
+            contract.init()
+            print("name="+contract.storage?.name)
+            val offlineApiRes = contract.offlineGetInfo("hi")
+            print("offline api res is $offlineApiRes")
+        }
         debug()
         testIf()
         testNumber()
