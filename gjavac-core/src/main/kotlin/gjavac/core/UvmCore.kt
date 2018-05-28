@@ -3,6 +3,7 @@ package gjavac.core
 import gjavac.cecil.Instruction
 import gjavac.cecil.MethodDefinition
 import gjavac.exceptions.GjavacException
+import gjavac.utils.TranslatorUtils
 
 open class UvmInstruction(val asmLine: String, var lineNumber: Int = 0, var jvmInstruction: Instruction? = null) {
     var locationLabel: String? = null
@@ -170,7 +171,6 @@ class UvmProto {
     }
 
     fun toUvmAss(isTop: Boolean = false): String {
-        // TODO: 整体跑wan zai diaoyong zhege, also in C# version contains it
         val builder = StringBuilder()
 
         // 如果是顶部proto，增加.upvalues num
@@ -183,13 +183,13 @@ class UvmProto {
         builder.append(".func " + name + " " + maxStackSize + " " + numparams + " " + sizeLocVars + "\r\n")
 
         builder.append(".begin_const\r\n")
-        for (value: Any in constantValues) {
+        for (value: Any? in constantValues) {
             builder.append("\t")
             if (value == null) {
                 builder.append("nil\r\n")
             }
-            if (value is String) {
-                builder.append("\"" + value + "\"\r\n")
+            else if (value is String) {
+                builder.append("\"" + TranslatorUtils.escapeToAss(value) + "\"\r\n")
             } else if (value is Int || value is Long || value is Double || value is Short || value is Byte) {
                 builder.append(value.toString() + "\r\n")
             } else if (value is Boolean) {

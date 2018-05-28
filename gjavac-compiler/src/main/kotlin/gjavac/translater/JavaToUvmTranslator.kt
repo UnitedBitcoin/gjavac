@@ -12,7 +12,8 @@ import org.objectweb.asm.Type
 
 // TODO: top level variables in kotlin
 // TODO: process of kotlink internal Intrinsics::compare
-// TODO: 比较指令的翻译
+// TODO: find out each uvms instruction's register get/set operation, and optimize not-used set-register-op
+// TODO: move %a %b, pop %a  => optimize it when without location label
 
 open class JavaToUvmTranslator {
     val generatedInstructions: MutableList<UvmInstruction> = mutableListOf()
@@ -175,7 +176,7 @@ open class JavaToUvmTranslator {
             var slotIndex = proto.subProtos.size + 1
             proto.addInstructionLine("closure %" + slotIndex + " " + methodProto.name, null)
             proto.internConstantValue(m.name)
-            proto.addInstructionLine("loadk %" + tmp1Slot + " const \"" + m.name + "\"", null)
+            proto.addInstructionLine("loadk %" + tmp1Slot + " const \"" + TranslatorUtils.escapeToAss(m.name) + "\"", null)
             proto.addInstructionLine(
                     "settable %" + tableSlot + " %" + tmp1Slot + " %" + slotIndex, null)
             val methodProtoName = methodProto.name
@@ -585,7 +586,7 @@ open class JavaToUvmTranslator {
             val literalValueInUvms = TranslatorUtils.escape(value as String)
         }
         var constantIndex = proto.internConstantValue(value)
-        result.add(proto.makeInstructionLine("loadk %" + targetSlot + " const " + (if (value is String) ("\"" + value + "\"") else value) + commentPrefix, i))
+        result.add(proto.makeInstructionLine("loadk %" + targetSlot + " const " + (if (value is String) ("\"" + TranslatorUtils.escapeToAss(value) + "\"") else value) + commentPrefix, i))
     }
 
     /**
@@ -1012,11 +1013,11 @@ open class JavaToUvmTranslator {
                     if (methodName == "concat") // TODO
                     {
                         // 连接字符串可以直接使用op_concat指令
-                        targetFuncName = "concat";
-                        useOpcode = true;
-                        hasThis = false;
+                        targetFuncName = "concat"
+                        useOpcode = true
+                        hasThis = false
                         if (paramsCount == 1) {
-                            targetFuncName = "tostring"; // 只有一个参数的情况下，当成tostring处理
+                            targetFuncName = "tostring" // 只有一个参数的情况下，当成tostring处理
                             useOpcode = false;
                         }
                     } else if (methodName == "op_Equality") // TODO
@@ -1144,6 +1145,14 @@ open class JavaToUvmTranslator {
                             hasThis = false;
                             makeSingleArithmeticInstructions(proto, targetFuncName, i, result, commentPrefix, true)
                             return result
+                        }
+                        "concat"-> {
+                            targetFuncName = "concat"
+                            useOpcode = true
+                            hasThis = false
+                            makeArithmeticInstructions(proto, targetFuncName, i, result, commentPrefix, false);
+                            return result
+                            // TODO
                         }
                         else -> {
                             targetFuncName = methodName
@@ -1315,6 +1324,8 @@ open class JavaToUvmTranslator {
                 if (useOpcode && !isUserDefineFunc) {
                     if (targetFuncName == "concat") {
                         result.add(proto.makeInstructionLine("concat %" + resultSlotIndex + " %" + proto.tmp3StackTopSlotIndex + " %" + (proto.tmp3StackTopSlotIndex + 1) + commentPrefix, i))
+                        pushIntoEvalStackTopSlot(proto, resultSlotIndex, i, result, commentPrefix)
+                        return result
                     } else if (targetFuncName == "newtable") {
                         result.add(proto.makeInstructionLine("newtable %" + resultSlotIndex + " 0 0" + commentPrefix, i))
                     } else if (targetFuncName == "array.add") {

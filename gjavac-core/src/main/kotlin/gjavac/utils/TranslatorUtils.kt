@@ -212,5 +212,16 @@ class TranslatorUtils {
         fun escape(input: String): String {
             return StringEscapeUtils.escapeJson(input)
         }
+
+        fun escapeToAss(input: String?): String? {
+            if(input==null) {
+                return null;
+            }
+            if(input.contains('"')) {
+                return escape(input)
+            } else {
+                return input
+            }
+        }
     }
 }

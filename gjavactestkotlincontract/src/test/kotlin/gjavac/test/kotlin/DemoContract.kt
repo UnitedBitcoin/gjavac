@@ -36,8 +36,10 @@ class MyContract : UvmContract<Storage>() {
     }
 
     fun sayHi(name: String): String {
-        UvmCoreLibs.print("say hi api called of contract to $name")
-        return "Hello" + name
+//        UvmCoreLibs.print("say hi api called of contract to $name")
+        print(concat("say hi api called of contract to ", name))
+        return concat("Hello " , name)
+//        return "Hello" + name
     }
 
     fun setName(name: String) {
@@ -65,9 +67,10 @@ class MyContract : UvmContract<Storage>() {
 
 class Person {
 
-    // TODO: event, LCMP, LREM etc.
+    // TODO: event, LREM etc.
 
     fun sayHi(name: String): String {
+        val a = "hello$name"
         UvmCoreLibs.print("sayHi func called")
         return "Hello$name java. I love money"
     }
@@ -299,6 +302,7 @@ class Person {
         if (contract is MyContract) {
             print("contract is contract")
             print(contract.sayHi("contract-name"))
+//            return contract
             contract.storage = Storage()
             contract.init()
             print("name="+contract.storage?.name)

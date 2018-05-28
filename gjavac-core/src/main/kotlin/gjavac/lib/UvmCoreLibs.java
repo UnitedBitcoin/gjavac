@@ -1,6 +1,7 @@
 package gjavac.lib;
 
 import com.google.gson.Gson;
+import gjavac.exceptions.GjavacException;
 
 import java.util.*;
 
@@ -37,6 +38,13 @@ public class UvmCoreLibs {
 
     public static boolean or(boolean a, boolean b) {
         return a || b;
+    }
+
+    public static String concat(String a, String b) {
+        if(a==null || b==null) {
+            throw new RuntimeException("concat's arguments can't be null");
+        }
+        return a + b;
     }
 
     public static int idiv(int a, int b) {

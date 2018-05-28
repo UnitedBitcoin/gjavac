@@ -36,6 +36,14 @@ fun main(args: Array<String>) {
         bw.write(metaInfoJson)
         bw.flush()
     })
+    if("true" == System.getenv("DEBUG")) {
+        var jvmAssOutputfilename = "result.jvm_ass"
+        use(FileOutputStream(File(jvmAssOutputfilename)), { fos ->
+            val bw = BufferedWriter(PrintWriter(fos))
+            bw.write(jvmContentBuilder.toString())
+            bw.flush()
+        })
+    }
     println("compilation done, result file is $outFilename and $metaOutputfilename")
 }
 
