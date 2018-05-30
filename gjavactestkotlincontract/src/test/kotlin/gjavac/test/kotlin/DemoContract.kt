@@ -32,6 +32,7 @@ class MyContract : UvmContract<Storage>() {
 
         val utils = Utils()
         print("2+3=" + utils.sum(2, 3))
+        print("end of init func")
 //        this.storage?.age = 25
     }
 
@@ -289,7 +290,6 @@ class Person {
     }
 
     fun testImportContract() {
-        // TODO
         val utilsContract = UvmCoreLibs.importContract(Utils::class.java, "utils")
         UvmCoreLibs.print("3+4=${utilsContract.sum(3, 4)}")
     }
@@ -305,6 +305,7 @@ class Person {
 //            return contract
             contract.storage = Storage()
             contract.init()
+            print(contract.storage?.name)
             print("name="+contract.storage?.name)
             val offlineApiRes = contract.offlineGetInfo("hi")
             print("offline api res is $offlineApiRes")

@@ -4,6 +4,7 @@ import gjavac.cecil.Instruction
 import gjavac.cecil.MethodDefinition
 import gjavac.exceptions.GjavacException
 import gjavac.utils.TranslatorUtils
+import gjavac.utils.use
 
 open class UvmInstruction(val asmLine: String, var lineNumber: Int = 0, var jvmInstruction: Instruction? = null) {
     var locationLabel: String? = null
@@ -17,6 +18,229 @@ open class UvmInstruction(val asmLine: String, var lineNumber: Int = 0, var jvmI
         val label = locationLabel
         return label != null && label.length > 0
     }
+
+    fun opName(): String {
+        val splited = asmLine.split(' ')
+        if (splited.isNotEmpty()) {
+            return splited[0].trim().toLowerCase()
+        } else {
+            return ""
+        }
+    }
+
+    fun getArg(index: Int): Any? {
+        val splited = asmLine.split(' ')
+        if (splited.isNotEmpty()) {
+            val argsCount = splited.size - 1
+            if (argsCount > index) {
+                return splited[index + 1]
+            }
+        }
+        return null
+//        if (args.size > index) {
+//            return args[index]
+//        } else {
+//            return null
+//        }
+    }
+
+    // opcode是否是修改第一个参数的register的内容
+    fun isSetFirstArgOp(): Boolean {
+        return when (opName().toLowerCase()) {
+            "push" -> false
+            "jmp" -> false
+            else -> true
+        }
+    }
+
+    fun isEvalStackChangeOp(): Boolean {
+        return when (opName().toLowerCase()) {
+            "push", "pop" -> true
+            else -> false
+        }
+    }
+
+    // 不影响现有堆对象或eval stack的指令
+    fun isJustChangeSlotOp(): Boolean {
+        return when(opName().toLowerCase()) {
+            "move", "loadk", "loadnil", "gettable", "gettop", "getupval", "closure", "concat", "newtable", "len" -> true
+            else->false
+        }
+    }
+
+    // 是否有操作某个寄存器或常数的非A参数
+    fun hasArgNotFirstPosition(arg: String): Boolean {
+        val splitedByComment = asmLine.split(';')
+        if (splitedByComment.isEmpty())
+            return false
+        val line = splitedByComment[0].trim()
+        val splited = line.split(' ')
+        if (splited.size <= 2)
+            return false
+        for (i in 2..(splited.size - 1)) {
+            if (splited[i].trim().toLowerCase() == arg.trim().toLowerCase())
+                return true
+        }
+        return false
+    }
+
+    fun usedSlotsWithPosition(): List<Int?> {
+        val splitedByComment = asmLine.split(';')
+        if (splitedByComment.isEmpty())
+            return listOf()
+        val line = splitedByComment[0].trim()
+        val splited = line.split(' ')
+        if (splited.size < 2)
+            return listOf()
+        val slots = mutableListOf<Int?>()
+        for (i in 1..(splited.size - 1)) {
+            val arg = splited[i].trim().toLowerCase()
+            if (arg.startsWith('%') && arg.length > 1 && arg.matches(Regex("%\\d+"))) {
+                val argSlot = arg.substring(1).toInt()
+                slots += argSlot
+            } else {
+                slots += null as Int?
+            }
+        }
+        when (opName().toLowerCase()) {
+            "call", "tailcall" -> {
+                // call/tailcall %a argsCount returnCount
+                val startSlot = slots[0]!!
+                val argsCount = splited[2].trim().toInt()
+                val returnCount = splited[3].trim().toInt() - 1
+                val maxAffectSlotsCount = if (argsCount >= (returnCount - 1)) argsCount else (returnCount - 1)
+
+                for (i in 1..maxAffectSlotsCount) {
+                    slots += (startSlot + i)
+                }
+            }
+            "return" -> {
+                // return %a returnCount+1
+                val startSlot = slots[0]!!
+                val returnCount = splited[2].trim().toInt() - 1
+                if (returnCount > 0) {
+                    for (i in 1..(returnCount - 1)) {
+                        slots += (startSlot + i)
+                    }
+                } else {
+                    // return all slots after-or-equal startSlot
+                    // now return at most 10 slots
+                    for (i in 1..10) {
+                        slots += (startSlot + i)
+                    }
+                }
+            }
+        }
+        return slots.toList()
+    }
+
+    fun usedRegisterSlots(): List<Int> {
+        val slotsWithPosition = usedSlotsWithPosition()
+        return slotsWithPosition.filterNotNull()
+    }
+
+    // 本指令需要读取的slots列表
+    fun needReadRegisterSlots(): List<Int> {
+        val slots = usedSlotsWithPosition()
+        if (slots.isEmpty())
+            return listOf()
+        val splitedByComment = asmLine.split(';')
+        val splited = splitedByComment[0].trim().split(' ')
+        when (opName().toLowerCase()) {
+            "settable" -> {
+                // settable %a rk(b) rk(c)
+                return slots.filterNotNull()
+            }
+            "call", "tailcall" -> {
+                // call/tailcall %a argsCount returnCount
+                val startSlot = slots[0]!!
+                val argsCount = splited[2].trim().toInt()
+                val returnCount = splited[3].trim().toInt() -1
+                val maxAffectSlotsCount = argsCount
+                val mSlots = mutableListOf<Int>()
+                mSlots += startSlot
+                for (i in 1..maxAffectSlotsCount) {
+                    mSlots += (startSlot + i)
+                }
+                return mSlots.toList()
+            }
+            "return" -> {
+                // return %a returnCount+1
+                val startSlot = slots[0]!!
+                val returnCount = splited[2].trim().toInt() - 1
+                val mSlots = mutableListOf<Int>()
+                mSlots += startSlot
+                if (returnCount > 0) {
+                    for (i in 1..(returnCount - 1)) {
+                        mSlots += (startSlot + i)
+                    }
+                } else {
+                    // return all slots after-or-equal startSlot
+                    // now return at most 10 slots
+                    for (i in 1..10) {
+                        mSlots += (startSlot + i)
+                    }
+                }
+                return mSlots.toList()
+            }
+        }
+        return if (isSetFirstArgOp()) {
+            slots.subList(1, slots.size).filterNotNull()
+        } else {
+            slots.filterNotNull()
+        }
+    }
+
+    fun needSetRegisterSlots(): List<Int> {
+        val slots = usedSlotsWithPosition()
+        if (slots.isEmpty()) {
+            return listOf()
+        }
+        val splitedByComment = asmLine.split(';')
+        val splited = splitedByComment[0].trim().split(' ')
+        when (opName().toLowerCase()) {
+            "call", "tailcall" -> {
+                // call/tailcall %a argsCount returnCount
+                val startSlot = slots[0]!!
+                val argsCount = splited[2].trim().toInt()
+                val returnCount = splited[3].trim().toInt() - 1
+                val maxAffectSlotsCount = returnCount - 1
+                if (returnCount > 0) {
+                    val mSlots = mutableListOf<Int>()
+                    mSlots += startSlot
+                    for (i in 1..maxAffectSlotsCount) {
+                        mSlots += (startSlot + i)
+                    }
+                    return mSlots.toList()
+                } else {
+                    return listOf()
+                }
+            }
+            "return" -> {
+                // return %a returnCount+1
+                val startSlot = slots[0]!!
+                val returnCount = splited[2].trim().toInt() - 1
+                val mSlots = mutableListOf<Int>()
+                if (returnCount > 0) {
+                    for (i in 0..(returnCount - 1)) {
+                        mSlots += (startSlot + i)
+                    }
+                } else {
+                    // return all slots after-or-equal startSlot
+                    // now return at most 10 slots
+                    for (i in 0..9) {
+                        mSlots += (startSlot + i)
+                    }
+                }
+                return mSlots.toList()
+            }
+        }
+        return if (isSetFirstArgOp()) {
+            listOf(slots[0]).filterNotNull()
+        } else {
+            listOf()
+        }
+    }
 }
 
 class UvmEmptyInstruction(val comment: String = "") : UvmInstruction("", 0) {
@@ -26,8 +250,7 @@ class UvmEmptyInstruction(val comment: String = "") : UvmInstruction("", 0) {
 }
 
 //add by zq
-enum class EvalStackOpEnum(val value:Int)
-{
+enum class EvalStackOpEnum(val value: Int) {
     NotEvalStackOp(0),
     AddEvalStackSize(1),
     SubEvalStackSize(2),
@@ -187,8 +410,7 @@ class UvmProto {
             builder.append("\t")
             if (value == null) {
                 builder.append("nil\r\n")
-            }
-            else if (value is String) {
+            } else if (value is String) {
                 builder.append("\"" + TranslatorUtils.escapeToAss(value) + "\"\r\n")
             } else if (value is Int || value is Long || value is Double || value is Short || value is Byte) {
                 builder.append(value.toString() + "\r\n")

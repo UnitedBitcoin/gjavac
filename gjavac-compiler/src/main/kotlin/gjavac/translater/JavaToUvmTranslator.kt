@@ -13,7 +13,7 @@ import org.objectweb.asm.Type
 // TODO: top level variables in kotlin
 // TODO: process of kotlink internal Intrinsics::compare
 // TODO: find out each uvms instruction's register get/set operation, and optimize not-used set-register-op
-// TODO: move %a %b, pop %a  => optimize it when without location label
+// move %a %b, pop %a  => pop %a, optimize it when without location label
 
 open class JavaToUvmTranslator {
     val generatedInstructions: MutableList<UvmInstruction> = mutableListOf()
@@ -107,7 +107,7 @@ open class JavaToUvmTranslator {
             }
             Contract::storage.get(contractAnnotation)
             val contractAnnotationTypeName = contractAnnotation.toString()
-            val storageTypeName = contractAnnotationTypeName.substring(contractAnnotationTypeName.indexOf("(storage=class ")+"(storage=class ".length, contractAnnotationTypeName.lastIndexOf(")"))
+            val storageTypeName = contractAnnotationTypeName.substring(contractAnnotationTypeName.indexOf("(storage=class ") + "(storage=class ".length, contractAnnotationTypeName.lastIndexOf(")"))
             val storageType = Class.forName(storageTypeName)
             for (storageField in storageType.declaredFields) {
                 val storagePropName = storageField.name
@@ -267,22 +267,22 @@ open class JavaToUvmTranslator {
     }
 
     //fun addEvalStackSizeInstructions(proto: UvmProto, i: Instruction, result: MutableList<UvmInstruction>, commentPrefix: String) {
-     //   proto.internConstantValue(1)
-      //  var uvmInst = proto.makeInstructionLine("add %" + proto.evalStackSizeIndex + " %" + proto.evalStackSizeIndex + " const 1" + commentPrefix, i)
-      //  uvmInst.evalStackOp = EvalStackOpEnum.AddEvalStackSize
-      //  result.add(uvmInst)
+    //   proto.internConstantValue(1)
+    //  var uvmInst = proto.makeInstructionLine("add %" + proto.evalStackSizeIndex + " %" + proto.evalStackSizeIndex + " const 1" + commentPrefix, i)
+    //  uvmInst.evalStackOp = EvalStackOpEnum.AddEvalStackSize
+    //  result.add(uvmInst)
     //}
 
     //fun subEvalStackSizeInstructions(proto: UvmProto, i: Instruction, result: MutableList<UvmInstruction>, commentPrefix: String) {
-     //   proto.internConstantValue(1)
-      //  var uvmInst = proto.makeInstructionLine("sub %" + proto.evalStackSizeIndex + " %" + proto.evalStackSizeIndex + " const 1" + commentPrefix, i)
-      //  uvmInst.evalStackOp = EvalStackOpEnum.SubEvalStackSize
-      //  result.add(uvmInst)
+    //   proto.internConstantValue(1)
+    //  var uvmInst = proto.makeInstructionLine("sub %" + proto.evalStackSizeIndex + " %" + proto.evalStackSizeIndex + " const 1" + commentPrefix, i)
+    //  uvmInst.evalStackOp = EvalStackOpEnum.SubEvalStackSize
+    //  result.add(uvmInst)
     //}
 
     fun popFromEvalStackToSlot(proto: UvmProto, slotIndex: Int, i: Instruction,
                                result: MutableList<UvmInstruction>, commentPrefix: String) {
-        if(supportUvmExtraOpcodes) {
+        if (supportUvmExtraOpcodes) {
             val uvmInst = proto.makeInstructionLine("pop %$slotIndex $commentPrefix", i)
             uvmInst.args += slotIndex
 //            uvmInst.evalStackOp = EvalStackOpEnum.SubEvalStackSize
@@ -300,7 +300,7 @@ open class JavaToUvmTranslator {
     }
 
     fun subEvalStackSize(proto: UvmProto, i: Instruction, result: MutableList<UvmInstruction>, commentPrefix: String) {
-        if(supportUvmExtraOpcodes) {
+        if (supportUvmExtraOpcodes) {
             val uvmInst = proto.makeInstructionLine("pop %${proto.evalStackIndex} $commentPrefix", i)
             uvmInst.args += proto.evalStackIndex
 //            uvmInst.evalStackOp = EvalStackOpEnum.SubEvalStackSize
@@ -315,7 +315,7 @@ open class JavaToUvmTranslator {
 
     fun pushIntoEvalStackTopSlot(proto: UvmProto, slotIndex: Int, i: Instruction,
                                  result: MutableList<UvmInstruction>, commentPrefix: String) {
-        if(supportUvmExtraOpcodes) {
+        if (supportUvmExtraOpcodes) {
             val uvmInst = proto.makeInstructionLine("push %$slotIndex $commentPrefix", i)
             uvmInst.args += slotIndex
 //            uvmInst.evalStackOp = EvalStackOpEnum.AddAndSetEvalStackTop
@@ -377,7 +377,7 @@ open class JavaToUvmTranslator {
         }
 
         // 把add结果存入eval stack
-        pushIntoEvalStackTopSlot(proto,proto.tmp2StackTopSlotIndex,i,result,commentPrefix)
+        pushIntoEvalStackTopSlot(proto, proto.tmp2StackTopSlotIndex, i, result, commentPrefix)
     }
 
     fun makeCompareInstructions(proto: UvmProto, compareType: String, i: Instruction, result: MutableList<UvmInstruction>,
@@ -392,10 +392,10 @@ open class JavaToUvmTranslator {
         val arg1SlotIndex = proto.tmp3StackTopSlotIndex + 1 // top
         val arg2SlotIndex = proto.tmp3StackTopSlotIndex + 2 // top-1
 
-        popFromEvalStackToSlot(proto,arg1SlotIndex,i,result,commentPrefix)
+        popFromEvalStackToSlot(proto, arg1SlotIndex, i, result, commentPrefix)
 
         // 再次获取eval stack栈顶的值
-        popFromEvalStackToSlot(proto,arg2SlotIndex,i,result,commentPrefix)
+        popFromEvalStackToSlot(proto, arg2SlotIndex, i, result, commentPrefix)
 
 
         // 比较arg1和arg2
@@ -440,7 +440,7 @@ open class JavaToUvmTranslator {
         // 把结果0存入eval stack
         result.add(proto.makeInstructionLine(
                 "loadk %" + proto.tmp2StackTopSlotIndex + " const 0" + commentPrefix, i))
-        pushIntoEvalStackTopSlot(proto,proto.tmp2StackTopSlotIndex,i,result,commentPrefix)
+        pushIntoEvalStackTopSlot(proto, proto.tmp2StackTopSlotIndex, i, result, commentPrefix)
 
         // jmp到压栈第1个分支后面
         var jmpLabel3 = proto.name + "_3_cmp_" + i.offset;
@@ -453,7 +453,7 @@ open class JavaToUvmTranslator {
 
         result.add(proto.makeInstructionLine(
                 "loadk %" + proto.tmp3StackTopSlotIndex + " const 1" + commentPrefix, i))
-        pushIntoEvalStackTopSlot(proto,proto.tmp3StackTopSlotIndex,i,result,commentPrefix)
+        pushIntoEvalStackTopSlot(proto, proto.tmp3StackTopSlotIndex, i, result, commentPrefix)
 
         result.add(proto.makeEmptyInstruction(""))
     }
@@ -469,7 +469,7 @@ open class JavaToUvmTranslator {
 
         // 加载value
 
-        popFromEvalStackToSlot(proto,valueSlot,i,result,commentPrefix)
+        popFromEvalStackToSlot(proto, valueSlot, i, result, commentPrefix)
         // 对于布尔类型，因为.net中布尔类型参数加载的时候用的ldc.i，加载的是整数，所以这里要进行类型转换成bool类型，使用 not not a来转换
         if (needConvtToBool) {
             result.add(proto.makeInstructionLine("not %" + valueSlot + " %" + valueSlot + commentPrefix, i))
@@ -479,13 +479,13 @@ open class JavaToUvmTranslator {
         // 加载table
         //result.add(proto.makeInstructionLine("gettable %" + tableSlot + " %" + proto.evalStackIndex + " %" + proto.evalStackSizeIndex + commentPrefix, i))
 
-        popFromEvalStackToSlot(proto,tableSlot,i,result,commentPrefix)
+        popFromEvalStackToSlot(proto, tableSlot, i, result, commentPrefix)
 
         // settable
         result.add(proto.makeInstructionLine(
                 "loadk %" + proto.tmp2StackTopSlotIndex + " const \"" + propName + "\"" + commentPrefix, i))
         result.add(proto.makeInstructionLine(
-                "settable %" + tableSlot + " % " + proto.tmp2StackTopSlotIndex + " %" + valueSlot + commentPrefix, i))
+                "settable %" + tableSlot + " %" + proto.tmp2StackTopSlotIndex + " %" + valueSlot + commentPrefix, i))
     }
 
     /**
@@ -498,13 +498,13 @@ open class JavaToUvmTranslator {
         var valueSlot = proto.tmp2StackTopSlotIndex + 2
 
         // 加载table
-        popFromEvalStackToSlot(proto,tableSlot,i,result,commentPrefix)
+        popFromEvalStackToSlot(proto, tableSlot, i, result, commentPrefix)
 
         // gettable
         result.add(proto.makeInstructionLine(
                 "loadk %" + proto.tmp2StackTopSlotIndex + " const \"" + propName + "\"" + commentPrefix, i))
         result.add(proto.makeInstructionLine(
-                "gettable %" + valueSlot + " % " + tableSlot + " %" + proto.tmp2StackTopSlotIndex + commentPrefix, i))
+                "gettable %" + valueSlot + " %" + tableSlot + " %" + proto.tmp2StackTopSlotIndex + commentPrefix, i))
 
         // 对于布尔类型，因为.net中布尔类型参数加载的时候用的ldc.i，加载的是整数，所以这里要进行类型转换成bool类型，使用 not not a来转换
         if (needConvtToBool) {
@@ -513,7 +513,7 @@ open class JavaToUvmTranslator {
         }
         proto.internConstantValue(1)
         // value放回eval stack
-        pushIntoEvalStackTopSlot(proto,valueSlot,i,result,commentPrefix)
+        pushIntoEvalStackTopSlot(proto, valueSlot, i, result, commentPrefix)
 
     }
 
@@ -526,7 +526,7 @@ open class JavaToUvmTranslator {
         proto.internConstantValue(1)
         val arg1SlotIndex = proto.tmp3StackTopSlotIndex + 1 // top
 
-        popFromEvalStackToSlot(proto,arg1SlotIndex,i,result,commentPrefix)
+        popFromEvalStackToSlot(proto, arg1SlotIndex, i, result, commentPrefix)
 
         // 执行算术操作符，结果存入tmp2
         result.add(proto.makeInstructionLine(uvmOpName + " %" + proto.tmp2StackTopSlotIndex + " %" + arg1SlotIndex + commentPrefix, i))
@@ -557,22 +557,22 @@ open class JavaToUvmTranslator {
         }
 
         // 把add结果存入eval stack
-        pushIntoEvalStackTopSlot(proto,proto.tmp2StackTopSlotIndex,i,result,commentPrefix)
+        pushIntoEvalStackTopSlot(proto, proto.tmp2StackTopSlotIndex, i, result, commentPrefix)
     }
 
     //fun makeGetTopOfEvalStackInst(proto: UvmProto, i: Instruction, result: MutableList<UvmInstruction>,
-      //                            targetSlot: Int, commentPrefix: String) {
-      //  var uvmInst = proto.makeInstructionLine("gettable %" + targetSlot + " %" + proto.evalStackIndex +
-       //         " %" + proto.evalStackSizeIndex + commentPrefix, i)
-       // uvmInst.evalStackOp = EvalStackOpEnum.GetEvalStackTop
-       // result.add(uvmInst)
-   // }
+    //                            targetSlot: Int, commentPrefix: String) {
+    //  var uvmInst = proto.makeInstructionLine("gettable %" + targetSlot + " %" + proto.evalStackIndex +
+    //         " %" + proto.evalStackSizeIndex + commentPrefix, i)
+    // uvmInst.evalStackOp = EvalStackOpEnum.GetEvalStackTop
+    // result.add(uvmInst)
+    // }
 
     //fun makeSetTopOfEvalStackInst(proto: UvmProto, i: Instruction, result: MutableList<UvmInstruction>,
-           //                       valueSlot: Int, commentPrefix: String) {
-       // var uvmInst =proto.makeInstructionLine("settable %" + proto.evalStackIndex + " %" + proto.evalStackSizeIndex + " %" + valueSlot + commentPrefix, i)
-       // uvmInst.evalStackOp = EvalStackOpEnum.SetEvalStackTop
-       // result.add(uvmInst)
+    //                       valueSlot: Int, commentPrefix: String) {
+    // var uvmInst =proto.makeInstructionLine("settable %" + proto.evalStackIndex + " %" + proto.evalStackSizeIndex + " %" + valueSlot + commentPrefix, i)
+    // uvmInst.evalStackOp = EvalStackOpEnum.SetEvalStackTop
+    // result.add(uvmInst)
     //}
 
     fun makeLoadNilInst(proto: UvmProto, i: Instruction, result: MutableList<UvmInstruction>,
@@ -594,7 +594,7 @@ open class JavaToUvmTranslator {
      */
     fun makeSingleArgumentSingleReturnGlobalFuncCall(proto: UvmProto, i: Instruction, result: MutableList<UvmInstruction>,
                                                      funcName: String, commentPrefix: String) {
-        popFromEvalStackToSlot(proto,proto.tmp3StackTopSlotIndex,i,result,commentPrefix)
+        popFromEvalStackToSlot(proto, proto.tmp3StackTopSlotIndex, i, result, commentPrefix)
 
         val paramsCount = 1
         val returnCount = 1
@@ -604,7 +604,7 @@ open class JavaToUvmTranslator {
 
         result.add(proto.makeInstructionLine("call %" + proto.tmp2StackTopSlotIndex + " " + (paramsCount + 1) + " " + (returnCount + 1) + commentPrefix, i))
 
-        pushIntoEvalStackTopSlot(proto,proto.tmp2StackTopSlotIndex,i,result,commentPrefix)
+        pushIntoEvalStackTopSlot(proto, proto.tmp2StackTopSlotIndex, i, result, commentPrefix)
     }
 
     fun translateJvmInstruction(proto: UvmProto, i: Instruction, commentPrefix: String, onlyNeedResultCount: Boolean): MutableList<UvmInstruction> {
@@ -613,44 +613,44 @@ open class JavaToUvmTranslator {
             Opcodes.AALOAD, Opcodes.BALOAD, Opcodes.CALOAD, Opcodes.DALOAD, Opcodes.FALOAD, Opcodes.IALOAD, Opcodes.LALOAD, Opcodes.SALOAD -> {
                 // load reference from array
 
-                popFromEvalStackToSlot(proto,proto.tmp2StackTopSlotIndex,i,result,commentPrefix)
+                popFromEvalStackToSlot(proto, proto.tmp2StackTopSlotIndex, i, result, commentPrefix)
 
-                popFromEvalStackToSlot(proto,proto.tmp1StackTopSlotIndex,i,result,commentPrefix)
+                popFromEvalStackToSlot(proto, proto.tmp1StackTopSlotIndex, i, result, commentPrefix)
 
                 result.add(proto.makeInstructionLine("gettable %" + proto.tmp1StackTopSlotIndex + " %" + proto.tmp1StackTopSlotIndex + " %" + proto.tmp2StackTopSlotIndex + commentPrefix, i))
 
-                pushIntoEvalStackTopSlot(proto,proto.tmp1StackTopSlotIndex,i,result,commentPrefix)
+                pushIntoEvalStackTopSlot(proto, proto.tmp1StackTopSlotIndex, i, result, commentPrefix)
             }
             Opcodes.AASTORE, Opcodes.BASTORE, Opcodes.CASTORE, Opcodes.DASTORE, Opcodes.FASTORE, Opcodes.IASTORE, Opcodes.LASTORE, Opcodes.SASTORE -> {
                 // store into reference array
                 // value
-                popFromEvalStackToSlot(proto,proto.tmp3StackTopSlotIndex,i,result,commentPrefix)
+                popFromEvalStackToSlot(proto, proto.tmp3StackTopSlotIndex, i, result, commentPrefix)
                 // index
-                popFromEvalStackToSlot(proto,proto.tmp2StackTopSlotIndex,i,result,commentPrefix)
+                popFromEvalStackToSlot(proto, proto.tmp2StackTopSlotIndex, i, result, commentPrefix)
                 // arrayref
-                popFromEvalStackToSlot(proto,proto.tmp1StackTopSlotIndex,i,result,commentPrefix)
+                popFromEvalStackToSlot(proto, proto.tmp1StackTopSlotIndex, i, result, commentPrefix)
                 result.add(proto.makeInstructionLine("settable %" + proto.tmp1StackTopSlotIndex + " %" + proto.tmp2StackTopSlotIndex + " %" + proto.tmp3StackTopSlotIndex + commentPrefix, i))
             }
             Opcodes.ACONST_NULL -> {
                 // push null to operand stack
                 makeLoadNilInst(proto, i, result, proto.tmpMaxStackTopSlotIndex, commentPrefix)
 
-                pushIntoEvalStackTopSlot(proto,proto.tmpMaxStackTopSlotIndex,i,result,commentPrefix)
+                pushIntoEvalStackTopSlot(proto, proto.tmpMaxStackTopSlotIndex, i, result, commentPrefix)
             }
             Opcodes.POP -> {
-                popFromEvalStackToSlot(proto,proto.tmpMaxStackTopSlotIndex,i,result,commentPrefix)
+                popFromEvalStackToSlot(proto, proto.tmpMaxStackTopSlotIndex, i, result, commentPrefix)
             }
             Opcodes.ICONST_0, Opcodes.ICONST_1, Opcodes.ICONST_2, Opcodes.ICONST_3, Opcodes.ICONST_4, Opcodes.ICONST_5 -> {
                 // push integer to operand stack
                 val value = i.opCode - Opcodes.ICONST_0
                 makeLoadConstInst(proto, i, result, proto.tmp1StackTopSlotIndex, value, commentPrefix)
-                pushIntoEvalStackTopSlot(proto,proto.tmp1StackTopSlotIndex,i,result,commentPrefix + " ldc " + value)
+                pushIntoEvalStackTopSlot(proto, proto.tmp1StackTopSlotIndex, i, result, commentPrefix + " ldc " + value)
             }
             Opcodes.LCONST_0, Opcodes.LCONST_1 -> {
                 // push long to operand stack
                 val value = i.opCode - Opcodes.LCONST_0
                 makeLoadConstInst(proto, i, result, proto.tmp1StackTopSlotIndex, value, commentPrefix)
-                pushIntoEvalStackTopSlot(proto,proto.tmp1StackTopSlotIndex,i,result,commentPrefix + " ldc " + value)
+                pushIntoEvalStackTopSlot(proto, proto.tmp1StackTopSlotIndex, i, result, commentPrefix + " ldc " + value)
             }
             Opcodes.LDC -> {
                 // push const value to operand stack
@@ -659,18 +659,18 @@ open class JavaToUvmTranslator {
                     value = "" as Any
                 }
                 makeLoadConstInst(proto, i, result, proto.tmp1StackTopSlotIndex, value, commentPrefix)
-                pushIntoEvalStackTopSlot(proto,proto.tmp1StackTopSlotIndex,i,result,commentPrefix + " ldc " + value)
+                pushIntoEvalStackTopSlot(proto, proto.tmp1StackTopSlotIndex, i, result, commentPrefix + " ldc " + value)
             }
             Opcodes.ICONST_M1 -> {
                 val value = i.opArgs[0]
                 makeLoadConstInst(proto, i, result, proto.tmp1StackTopSlotIndex, value, commentPrefix)
-                pushIntoEvalStackTopSlot(proto,proto.tmp1StackTopSlotIndex,i,result,commentPrefix + " ldc " + value)
+                pushIntoEvalStackTopSlot(proto, proto.tmp1StackTopSlotIndex, i, result, commentPrefix + " ldc " + value)
             }
             Opcodes.ALOAD, Opcodes.ILOAD, Opcodes.DLOAD, Opcodes.FLOAD, Opcodes.LLOAD -> {
                 // load reference from local variable
                 val variableIndex = i.opArgs[0] as Int
                 val slotIndex = variableIndex
-                pushIntoEvalStackTopSlot(proto,slotIndex,i,result,commentPrefix + " ldloc " + slotIndex + " var" + variableIndex)
+                pushIntoEvalStackTopSlot(proto, slotIndex, i, result, commentPrefix + " ldloc " + slotIndex + " var" + variableIndex)
             }
             Opcodes.ASTORE, Opcodes.ISTORE, Opcodes.FSTORE, Opcodes.LSTORE, Opcodes.DSTORE -> {
                 // store reference info into local variable
@@ -678,19 +678,19 @@ open class JavaToUvmTranslator {
 //                val slotIndex = proto.callStackStartIndex + variableIndex
                 val slotIndex = variableIndex
                 // 获取eval stack的栈顶值
-                popFromEvalStackToSlot(proto,slotIndex,i,result,commentPrefix)
+                popFromEvalStackToSlot(proto, slotIndex, i, result, commentPrefix)
             }
             Opcodes.ANEWARRAY -> {
                 // create new array of reference
                 result.add(proto.makeInstructionLine("newtable %" + proto.tmp1StackTopSlotIndex + " 0 0" + commentPrefix, i))
-                pushIntoEvalStackTopSlot(proto,proto.tmp1StackTopSlotIndex,i,result,commentPrefix)
+                pushIntoEvalStackTopSlot(proto, proto.tmp1StackTopSlotIndex, i, result, commentPrefix)
             }
             Opcodes.ARETURN, Opcodes.IRETURN, Opcodes.LRETURN, Opcodes.DRETURN, Opcodes.FRETURN, Opcodes.RETURN -> {
                 // return reference from method
                 val hasReturn = !(proto.method?.signature?.returnType?.fullName().orEmpty().equals("void"))
                 val returnCount = if (hasReturn) 1 else 0
                 if (hasReturn) {
-                    popFromEvalStackToSlot(proto,proto.tmp1StackTopSlotIndex,i,result,commentPrefix)
+                    popFromEvalStackToSlot(proto, proto.tmp1StackTopSlotIndex, i, result, commentPrefix)
                     result.add(proto.makeInstructionLine("return %" + proto.tmp1StackTopSlotIndex + " " + (returnCount + 1) + commentPrefix, i))
                 }
                 result.add(proto.makeInstructionLine("return %0 1" + commentPrefix + " ret", i))
@@ -698,9 +698,9 @@ open class JavaToUvmTranslator {
             Opcodes.ARRAYLENGTH -> {
                 // get length of array
                 // arrayref
-                popFromEvalStackToSlot(proto,proto.tmp1StackTopSlotIndex,i,result,commentPrefix)
+                popFromEvalStackToSlot(proto, proto.tmp1StackTopSlotIndex, i, result, commentPrefix)
                 result.add(proto.makeInstructionLine("len %" + proto.tmp2StackTopSlotIndex + " %" + proto.tmp1StackTopSlotIndex + commentPrefix, i))
-                pushIntoEvalStackTopSlot(proto,proto.tmp2StackTopSlotIndex,i,result,commentPrefix)
+                pushIntoEvalStackTopSlot(proto, proto.tmp2StackTopSlotIndex, i, result, commentPrefix)
 
             }
             Opcodes.ATHROW -> {
@@ -715,7 +715,7 @@ open class JavaToUvmTranslator {
                 // push byte
                 val value = i.opArgs[0] as Int
                 makeLoadConstInst(proto, i, result, proto.tmp1StackTopSlotIndex, value, commentPrefix)
-                pushIntoEvalStackTopSlot(proto,proto.tmp1StackTopSlotIndex,i,result,commentPrefix+ " bipush " + value)
+                pushIntoEvalStackTopSlot(proto, proto.tmp1StackTopSlotIndex, i, result, commentPrefix + " bipush " + value)
             }
             Opcodes.CHECKCAST -> {
                 // Check whether object is of given type
@@ -777,7 +777,7 @@ open class JavaToUvmTranslator {
                 // operand stack: ..., value1, value2 -> operand stack: ..., result
                 // when <t>cmpg, if value1 > value2, then result = 1; else if value 1 == value2, then result = 0; else result = -1
                 val op: String
-                if (i.opCode == Opcodes.DCMPG || i.opCode == Opcodes.FCMPG || i.opCode==Opcodes.LCMP) {
+                if (i.opCode == Opcodes.DCMPG || i.opCode == Opcodes.FCMPG || i.opCode == Opcodes.LCMP) {
                     op = "gt"
                 } else if (i.opCode == Opcodes.DCMPL || i.opCode == Opcodes.FCMPL) {
                     op = "lt"
@@ -785,15 +785,15 @@ open class JavaToUvmTranslator {
                     throw GjavacException("not supported opcode now ${i.opCodeName()}:L${i.linenumber}")
                 }
 
-                popFromEvalStackToSlot(proto,proto.tmp2StackTopSlotIndex,i,result,commentPrefix)
-                popFromEvalStackToSlot(proto,proto.tmp1StackTopSlotIndex,i,result,commentPrefix)
+                popFromEvalStackToSlot(proto, proto.tmp2StackTopSlotIndex, i, result, commentPrefix)
+                popFromEvalStackToSlot(proto, proto.tmp1StackTopSlotIndex, i, result, commentPrefix)
 
                 proto.internConstantValue(0)
                 proto.internConstantValue(1)
                 proto.internConstantValue(-1)
 
-                if(supportUvmExtraOpcodes) {
-                    if (i.opCode==Opcodes.LCMP) {
+                if (supportUvmExtraOpcodes) {
+                    if (i.opCode == Opcodes.LCMP) {
                         result.add(proto.makeInstructionLine("cmp %${proto.tmp3StackTopSlotIndex} %${proto.tmp1StackTopSlotIndex} %${proto.tmp2StackTopSlotIndex} $commentPrefix", i))
                         pushIntoEvalStackTopSlot(proto, proto.tmp3StackTopSlotIndex, i, result, commentPrefix)
                         return result
@@ -841,7 +841,7 @@ open class JavaToUvmTranslator {
 
                 result.add(proto.makeInstructionLine("loadk %" + proto.tmp3StackTopSlotIndex + " const " + (if (op == "gt") -1 else 1) + commentPrefix, i))
 
-                pushIntoEvalStackTopSlot(proto,proto.tmp3StackTopSlotIndex,i,result,commentPrefix)
+                pushIntoEvalStackTopSlot(proto, proto.tmp3StackTopSlotIndex, i, result, commentPrefix)
             }
             Opcodes.NEW -> {
                 // 如果是String或StringBuilder或StringBuffer, push ""
@@ -855,7 +855,7 @@ open class JavaToUvmTranslator {
                         proto.internConstantValue("")
                         makeLoadConstInst(proto, i, result, proto.tmp1StackTopSlotIndex, "", commentPrefix)
 
-                        pushIntoEvalStackTopSlot(proto,proto.tmp1StackTopSlotIndex,i,result,commentPrefix + " newstr")
+                        pushIntoEvalStackTopSlot(proto, proto.tmp1StackTopSlotIndex, i, result, commentPrefix + " newstr")
 
                         return result
                     }
@@ -863,7 +863,7 @@ open class JavaToUvmTranslator {
                 // 如果是contract类型 or with @Component type,调用构造函数，而不是设置各成员函数
                 if (operand != null && operand.javaClass == String::class.java
                         && ((operand.equals(this.contractType?.name)
-                        && this.contractType != null) || (TranslatorUtils.isComponentClass(Class.forName((operand as String).replace("/", ".")))))) {
+                                && this.contractType != null) || (TranslatorUtils.isComponentClass(Class.forName((operand as String).replace("/", ".")))))) {
                     val protoName = TranslatorUtils.makeProtoNameOfTypeConstructorByTypeName(operand as String) // 构造函数的名字
                     result.add(proto.makeInstructionLine(
                             "closure %" + proto.tmp2StackTopSlotIndex + " " + protoName, i))
@@ -876,12 +876,12 @@ open class JavaToUvmTranslator {
                     result.add(proto.makeInstructionLine("newtable %" + proto.tmp2StackTopSlotIndex + " 0 0" + commentPrefix, i))
                 }
 
-                pushIntoEvalStackTopSlot(proto,proto.tmp2StackTopSlotIndex,i,result,commentPrefix + " newobj")
+                pushIntoEvalStackTopSlot(proto, proto.tmp2StackTopSlotIndex, i, result, commentPrefix + " newobj")
             }
             Opcodes.DUP -> {
                 // 把eval stack栈顶元素复制一份到eval-stack顶
                 // 获取eval stack顶部的值
-                if(supportUvmExtraOpcodes) {
+                if (supportUvmExtraOpcodes) {
                     result.add(proto.makeInstructionLine("gettop %${proto.tmp2StackTopSlotIndex} $commentPrefix dup", i))
                     pushIntoEvalStackTopSlot(proto, proto.tmp2StackTopSlotIndex, i, result, commentPrefix + " dup")
                 } else {
@@ -897,7 +897,7 @@ open class JavaToUvmTranslator {
             Opcodes.GETSTATIC -> {
                 result.add(proto.makeInstructionLine("newtable %" + proto.tmp1StackTopSlotIndex + " 0 0" + commentPrefix, i))
 
-                pushIntoEvalStackTopSlot(proto,proto.tmp1StackTopSlotIndex,i,result,commentPrefix + i.instLine)
+                pushIntoEvalStackTopSlot(proto, proto.tmp1StackTopSlotIndex, i, result, commentPrefix + i.instLine)
                 return result
             }
             Opcodes.GETFIELD -> {
@@ -942,19 +942,19 @@ open class JavaToUvmTranslator {
                     // pop arguments, push newtable
                     //makeLoadNilInst(proto, i, result, proto.tmp1StackTopSlotIndex, commentPrefix)
                     for (j in 0..(methodInfo.methodArgs.size - 1)) {
-                        popFromEvalStackToSlot(proto,proto.tmpMaxStackTopSlotIndex,i,result,commentPrefix)
+                        popFromEvalStackToSlot(proto, proto.tmpMaxStackTopSlotIndex, i, result, commentPrefix)
                     }
-                    popFromEvalStackToSlot(proto,proto.tmpMaxStackTopSlotIndex,i,result,commentPrefix)
+                    popFromEvalStackToSlot(proto, proto.tmpMaxStackTopSlotIndex, i, result, commentPrefix)
                     return result
                 }
                 if (calledTypeName == "kotlin.jvm.internal.Intrinsics") {
                     if (methodName == "checkParameterIsNotNull" || methodName == "checkExpressionValueIsNotNull") {
                         subEvalStackSize(proto, i, result, commentPrefix)
                         subEvalStackSize(proto, i, result, commentPrefix)
-                    } else if(methodName == "compare") {
+                    } else if (methodName == "compare") {
                         // TODO
                         throw GjavacException("not implemented kotlink internal Intrinsics method $methodName:L${i.linenumber}")
-                    } else if(methodName=="throwNpe") {
+                    } else if (methodName == "throwNpe") {
                         val envSlot = proto.internUpvalue("ENV")
                         proto.internConstantValue("error")
                         result.add(proto.makeInstructionLine("gettabup %" + (proto.evalStackIndex + 20) + " @" + envSlot + " const \"error\"" + commentPrefix, i))
@@ -968,10 +968,10 @@ open class JavaToUvmTranslator {
                         //proto.internConstantValue(true)
                         //makeLoadConstInst(proto, i, result, proto.tmp1StackTopSlotIndex, true, commentPrefix)
                         //makeSetTopOfEvalStackInst(proto, i, result, proto.tmp1StackTopSlotIndex, commentPrefix)
-                        popFromEvalStackToSlot(proto,proto.tmpMaxStackTopSlotIndex,i,result,commentPrefix)
-                        popFromEvalStackToSlot(proto,proto.tmpMaxStackTopSlotIndex,i,result,commentPrefix)
+                        popFromEvalStackToSlot(proto, proto.tmpMaxStackTopSlotIndex, i, result, commentPrefix)
+                        popFromEvalStackToSlot(proto, proto.tmpMaxStackTopSlotIndex, i, result, commentPrefix)
                         makeLoadConstInst(proto, i, result, proto.tmp1StackTopSlotIndex, true, commentPrefix)
-                        pushIntoEvalStackTopSlot(proto,proto.tmp1StackTopSlotIndex,i,result,commentPrefix)
+                        pushIntoEvalStackTopSlot(proto, proto.tmp1StackTopSlotIndex, i, result, commentPrefix)
                     } else {
                         throw GjavacException("not implemented kotlink internal Intrinsics method $methodName:L${i.linenumber}")
                     }
@@ -984,14 +984,14 @@ open class JavaToUvmTranslator {
                     hasThis = false
                     needNeedPopThis = true
                 } else if ((calledTypeName == java.lang.Integer::class.java.canonicalName
-                        || calledTypeName == java.lang.Long::class.java.canonicalName
-                        || calledTypeName == java.lang.Float::class.java.canonicalName
-                        || calledTypeName == java.lang.Double::class.java.canonicalName
-                        || calledTypeName == java.lang.String::class.java.canonicalName)
-                        && (methodName == "valueOf" || methodName == "longValue" || methodName=="toLong"
-                        || methodName == "intValue" || methodName == "toInt"
-                        || methodName == "floatValue" || methodName == "toFloat"
-                        || methodName == "doubleValue" || methodName == "toDouble")) {
+                                || calledTypeName == java.lang.Long::class.java.canonicalName
+                                || calledTypeName == java.lang.Float::class.java.canonicalName
+                                || calledTypeName == java.lang.Double::class.java.canonicalName
+                                || calledTypeName == java.lang.String::class.java.canonicalName)
+                        && (methodName == "valueOf" || methodName == "longValue" || methodName == "toLong"
+                                || methodName == "intValue" || methodName == "toInt"
+                                || methodName == "floatValue" || methodName == "toFloat"
+                                || methodName == "doubleValue" || methodName == "toDouble")) {
                     proto.addNotMappedILInstruction(i)
                     return result
                 } else if (methodName == "toString") {
@@ -1049,7 +1049,7 @@ open class JavaToUvmTranslator {
                             val envIndex = proto.internUpvalue("ENV")
                             val globalPropName = "caller"
                             result.add(proto.makeInstructionLine("gettabup %" + proto.tmp1StackTopSlotIndex + " @" + envIndex + " const \"" + globalPropName + "\"" + commentPrefix, i))
-                            pushIntoEvalStackTopSlot(proto,proto.tmp1StackTopSlotIndex,i,result,commentPrefix )
+                            pushIntoEvalStackTopSlot(proto, proto.tmp1StackTopSlotIndex, i, result, commentPrefix)
                             return result
                         }
                         "caller_address" -> {
@@ -1057,7 +1057,7 @@ open class JavaToUvmTranslator {
                             val envIndex = proto.internUpvalue("ENV")
                             val globalPropName = "caller_address"
                             result.add(proto.makeInstructionLine("gettabup %" + proto.tmp1StackTopSlotIndex + " @" + envIndex + " const \"" + globalPropName + "\"" + commentPrefix, i))
-                            pushIntoEvalStackTopSlot(proto,proto.tmp1StackTopSlotIndex,i,result,commentPrefix )
+                            pushIntoEvalStackTopSlot(proto, proto.tmp1StackTopSlotIndex, i, result, commentPrefix)
                             return result
                         }
                         "debug" -> {
@@ -1075,9 +1075,9 @@ open class JavaToUvmTranslator {
                             //subEvalStackSizeInstructions(proto, i, result, commentPrefix)
                             //makeSetTopOfEvalStackInst(proto, i, result, proto.tmp1StackTopSlotIndex, commentPrefix)
 
-                            popFromEvalStackToSlot(proto,proto.tmp1StackTopSlotIndex,i,result,commentPrefix)
-                            popFromEvalStackToSlot(proto,proto.tmpMaxStackTopSlotIndex,i,result,commentPrefix)
-                            pushIntoEvalStackTopSlot(proto,proto.tmp1StackTopSlotIndex,i,result,commentPrefix)
+                            popFromEvalStackToSlot(proto, proto.tmp1StackTopSlotIndex, i, result, commentPrefix)
+                            popFromEvalStackToSlot(proto, proto.tmpMaxStackTopSlotIndex, i, result, commentPrefix)
+                            pushIntoEvalStackTopSlot(proto, proto.tmp1StackTopSlotIndex, i, result, commentPrefix)
                             paramsCount--
                         }
                         "importContract" -> {
@@ -1087,21 +1087,21 @@ open class JavaToUvmTranslator {
                             //subEvalStackSizeInstructions(proto, i, result, commentPrefix)
                             //makeSetTopOfEvalStackInst(proto, i, result, proto.tmp1StackTopSlotIndex, commentPrefix)
 
-                            popFromEvalStackToSlot(proto,proto.tmp1StackTopSlotIndex,i,result,commentPrefix)
-                            popFromEvalStackToSlot(proto,proto.tmpMaxStackTopSlotIndex,i,result,commentPrefix)
-                            pushIntoEvalStackTopSlot(proto,proto.tmp1StackTopSlotIndex,i,result,commentPrefix)
+                            popFromEvalStackToSlot(proto, proto.tmp1StackTopSlotIndex, i, result, commentPrefix)
+                            popFromEvalStackToSlot(proto, proto.tmpMaxStackTopSlotIndex, i, result, commentPrefix)
+                            pushIntoEvalStackTopSlot(proto, proto.tmp1StackTopSlotIndex, i, result, commentPrefix)
                             paramsCount--
                         }
                         "importContractFromAddress" -> {
                             targetFuncName = "import_contract_from_address"
                             // pop second last argument of contract class
                             //makeGetTopOfEvalStackInst(proto, i, result, proto.tmp1StackTopSlotIndex, commentPrefix)
-                           // subEvalStackSizeInstructions(proto, i, result, commentPrefix)
+                            // subEvalStackSizeInstructions(proto, i, result, commentPrefix)
                             //makeSetTopOfEvalStackInst(proto, i, result, proto.tmp1StackTopSlotIndex, commentPrefix)
 
-                            popFromEvalStackToSlot(proto,proto.tmp1StackTopSlotIndex,i,result,commentPrefix)
-                            popFromEvalStackToSlot(proto,proto.tmpMaxStackTopSlotIndex,i,result,commentPrefix)
-                            pushIntoEvalStackTopSlot(proto,proto.tmp1StackTopSlotIndex,i,result,commentPrefix)
+                            popFromEvalStackToSlot(proto, proto.tmp1StackTopSlotIndex, i, result, commentPrefix)
+                            popFromEvalStackToSlot(proto, proto.tmpMaxStackTopSlotIndex, i, result, commentPrefix)
+                            pushIntoEvalStackTopSlot(proto, proto.tmp1StackTopSlotIndex, i, result, commentPrefix)
                             paramsCount--
                         }
                         "neg" -> {
@@ -1132,21 +1132,21 @@ open class JavaToUvmTranslator {
                             makeArithmeticInstructions(proto, targetFuncName, i, result, commentPrefix, false)
                             return result
                         }
-                        "idiv"-> {
+                        "idiv" -> {
                             targetFuncName = "idiv"
                             useOpcode = true
                             hasThis = false
                             makeArithmeticInstructions(proto, targetFuncName, i, result, commentPrefix, false)
                             return result
                         }
-                        "not"-> {
+                        "not" -> {
                             targetFuncName = "not";
                             useOpcode = true;
                             hasThis = false;
                             makeSingleArithmeticInstructions(proto, targetFuncName, i, result, commentPrefix, true)
                             return result
                         }
-                        "concat"-> {
+                        "concat" -> {
                             targetFuncName = "concat"
                             useOpcode = true
                             hasThis = false
@@ -1310,7 +1310,7 @@ open class JavaToUvmTranslator {
                         }
                     }
 
-                    popFromEvalStackToSlot(proto,slotIndex,i,result,commentPrefix)
+                    popFromEvalStackToSlot(proto, slotIndex, i, result, commentPrefix)
                     // 对于布尔类型，因为.net中布尔类型参数加载的时候用的ldc.i，加载的是整数，所以这里要进行类型转换成bool类型，使用 not not a来转换
                     if (needConvtToBool) {
                         result.add(proto.makeInstructionLine("not %" + slotIndex + " %" + slotIndex + commentPrefix, i))
@@ -1405,7 +1405,7 @@ open class JavaToUvmTranslator {
                     }
                 } else if (isUserDefineFunc) {
                     if (!isUserDefinedInTableFunc) {
-                         // 访问本类的其他成员方法，访问的是父proto的局部变量，所以是访问upvalue
+                        // 访问本类的其他成员方法，访问的是父proto的局部变量，所以是访问upvalue
                         val protoName = TranslatorUtils.makeProtoName(calledMethod)
                         val funcUpvalIndex = proto.internUpvalue(protoName)
                         proto.internConstantValue(protoName)
@@ -1424,7 +1424,7 @@ open class JavaToUvmTranslator {
                             // object模拟uvm module，module信息在calledMethod的this参数中
                             // 这时候eval stack应该是[this], argStart开始的数据应该是this, ...
                             // result.addRange(DebugEvalStack(proto))
-                            popFromEvalStackToSlot(proto,proto.tmp1StackTopSlotIndex,i,result,commentPrefix)
+                            popFromEvalStackToSlot(proto, proto.tmp1StackTopSlotIndex, i, result, commentPrefix)
 
                             result.add(proto.makeInstructionLine(
                                     "gettable %" + proto.tmp2StackTopSlotIndex + " %" + proto.tmp1StackTopSlotIndex + " %" + proto.tmp2StackTopSlotIndex + commentPrefix, i))
@@ -1454,7 +1454,7 @@ open class JavaToUvmTranslator {
                 // 把调用结果存回eval-stack
                 if (hasReturn) {
                     // 调用结果在tmp3
-                    pushIntoEvalStackTopSlot(proto,proto.tmp3StackTopSlotIndex,i,result,commentPrefix )
+                    pushIntoEvalStackTopSlot(proto, proto.tmp3StackTopSlotIndex, i, result, commentPrefix)
                 }
                 if (needNeedPopThis) {
                     //makeLoadNilInst(proto, i, result, proto.tmp2StackTopSlotIndex, commentPrefix)
@@ -1501,9 +1501,10 @@ open class JavaToUvmTranslator {
                 val gotoLabel = i.opArgs[0] as Label
                 val gotoInstIndex = proto.method?.offsetOfLabel(gotoLabel)
                 if (gotoInstIndex == null) throw GjavacException("Can't find position of label $gotoLabel")
-                val toJmpToInst = proto.method?.code?.get(gotoInstIndex) ?: throw GjavacException("goto dest line not found $i")
+                val toJmpToInst = proto.method?.code?.get(gotoInstIndex)
+                        ?: throw GjavacException("goto dest line not found $i")
 
-                popFromEvalStackToSlot(proto,proto.tmp1StackTopSlotIndex,i,result,commentPrefix)
+                popFromEvalStackToSlot(proto, proto.tmp1StackTopSlotIndex, i, result, commentPrefix)
 
                 var arg1SlotIndex = proto.tmp1StackTopSlotIndex
                 var arg2SlotIndex = proto.tmp2StackTopSlotIndex
@@ -1512,7 +1513,7 @@ open class JavaToUvmTranslator {
                     "null", "notnull" -> makeLoadNilInst(proto, i, result, proto.tmp2StackTopSlotIndex, commentPrefix)
                     "cmp_lt", "cmp_le", "cmp_gt", "cmp_ge", "cmp_eq", "cmp_ne" -> {
                         // pop arg1
-                        popFromEvalStackToSlot(proto,proto.tmp2StackTopSlotIndex,i,result,commentPrefix)
+                        popFromEvalStackToSlot(proto, proto.tmp2StackTopSlotIndex, i, result, commentPrefix)
                         // swap arg1 and arg2
                         val tmpSlot = arg1SlotIndex
                         arg1SlotIndex = arg2SlotIndex
@@ -1560,8 +1561,8 @@ open class JavaToUvmTranslator {
             Opcodes.INSTANCEOF -> {
                 makeLoadConstInst(proto, i, result, proto.tmp1StackTopSlotIndex, true, commentPrefix)
                 //makeSetTopOfEvalStackInst(proto, i, result, proto.tmp1StackTopSlotIndex, commentPrefix)
-                popFromEvalStackToSlot(proto,proto.tmp1StackTopSlotIndex,i,result,commentPrefix)
-                pushIntoEvalStackTopSlot(proto,proto.tmp1StackTopSlotIndex,i,result,commentPrefix )
+                popFromEvalStackToSlot(proto, proto.tmp1StackTopSlotIndex, i, result, commentPrefix)
+                pushIntoEvalStackTopSlot(proto, proto.tmp1StackTopSlotIndex, i, result, commentPrefix)
             }
         // TODO: other opcodes
             else -> {
@@ -1580,6 +1581,17 @@ open class JavaToUvmTranslator {
             }
         }
         return count;
+    }
+
+    private fun rebuildNeededLocationsMap(proto: UvmProto) {
+        // 处理NeededLocationsMap，忽略empty lines
+        val notEmptyInstructionsOfProto = proto.notEmptyCodeInstructions()
+        for (j in 0..(notEmptyInstructionsOfProto.size - 1)) {
+            val inst = notEmptyInstructionsOfProto[j]
+            if (proto.neededLocationsMap.containsKey(j)) {
+                inst.locationLabel = proto.neededLocationsMap[j]
+            }
+        }
     }
 
     fun translateJvmMethod(method: MethodDefinition, jvmContentBuilder: StringBuilder,
@@ -1653,13 +1665,7 @@ open class JavaToUvmTranslator {
         }
 
         // 处理NeededLocationsMap，忽略empty lines
-        var notEmptyInstructionsOfProto = proto.notEmptyCodeInstructions()
-        for (j in 0..(notEmptyInstructionsOfProto.size - 1)) {
-            var inst = notEmptyInstructionsOfProto[j];
-            if (proto.neededLocationsMap.containsKey(j)) {
-                inst.locationLabel = proto.neededLocationsMap[j];
-            }
-        }
+        rebuildNeededLocationsMap(proto)
 
         // TODO: new optimizer
         //add by zq
@@ -1697,168 +1703,134 @@ open class JavaToUvmTranslator {
     //----------------------------reduce code imp---------------------------------------
 
     //------------------------reduce code imp----------------------------------
-    fun checkSlot(slot:String)
-    {
-        if (!slot.startsWith("%"))
-        {
+    fun checkSlot(slot: String) {
+        if (!slot.startsWith("%")) {
             throw GjavacException("error ReduceUvmInsts,invalid uvm inst:slot")
         }
     }
 
-    fun checkConstStr(str:String)
-    {
-        if (!str.startsWith("const \"") || !str.endsWith("\""))
-        {
+    fun checkConstStr(str: String) {
+        if (!str.startsWith("const \"") || !str.endsWith("\"")) {
             throw GjavacException("error ReduceUvmInsts,invalid uvm inst:conststr")
         }
     }
 
-   fun getLtCount(intlist:MutableList<Int> , inta:Int):Int
-    {
+    fun getLtCount(intlist: MutableList<Int>, inta: Int): Int {
         var count = 0
-        for(i in intlist)
-        {
+        for (i in intlist) {
             if (i < inta) count++
         }
         return count
     }
 
-    fun checkLoctionMoveRight(originalLoc:Int, newLoc:Int, proto: UvmProto)
-    {
-        if (newLoc < originalLoc && newLoc >= 0)
-        {
+    fun checkLoctionMoveRight(originalLoc: Int, newLoc: Int, proto: UvmProto) {
+        if (newLoc < originalLoc && newLoc >= 0) {
             var newIdx = 0;
-            for(j in 0..(originalLoc - 1))
-            {
-                if (!(proto.codeInstructions[j] is UvmEmptyInstruction))
-                {
+            for (j in 0..(originalLoc - 1)) {
+                if (!(proto.codeInstructions[j] is UvmEmptyInstruction)) {
                     newIdx++
                 }
             }
-            if (!proto.codeInstructions[originalLoc].hasLocationLabel()|| newLoc != newIdx)
-            {
+            if (!proto.codeInstructions[originalLoc].hasLocationLabel() || newLoc != newIdx) {
                 throw GjavacException("loc move error,please check!!!!")
             }
         }
     }
 
-    // TODO: push %a, pop %b => move %b %a, if there is no label between them
+    // push %a, pop %b => move %b %a, if there is no label between them
+    // TODO: remove move %a %a
+    // TODO: move %a %b, pop %a => pop %a if there is no label between them
 
-    fun ReduceUvmInstsImp(proto: UvmProto):Int
-    {
-        val notEmptyCodeInstructions:MutableList<UvmInstruction> = mutableListOf()
-        for (codeInst in proto.codeInstructions)
-        {
-            if (!(codeInst is UvmEmptyInstruction))
-            {
+    fun ReduceUvmInstsImp(proto: UvmProto): Int {
+        val notEmptyCodeInstructions: MutableList<UvmInstruction> = mutableListOf()
+        for (codeInst in proto.codeInstructions) {
+            if (!(codeInst is UvmEmptyInstruction)) {
                 notEmptyCodeInstructions.add(codeInst)
             }
         }
         proto.codeInstructions.clear()
-        for(inst in notEmptyCodeInstructions)
-        {
+        for (inst in notEmptyCodeInstructions) {
             proto.codeInstructions.add(inst)
         }
 
         //check location map first
-        for (loc in proto.neededLocationsMap)
-        {
-            if(!proto.codeInstructions[loc.key].hasLocationLabel()){
+        for (loc in proto.neededLocationsMap) {
+            val inst = proto.codeInstructions[loc.key]
+            if (!inst.hasLocationLabel()) {
                 throw GjavacException("location map not match !!!!")
             }
         }
 
         val CodeInstructions = proto.codeInstructions
-        val delIndexes:MutableList<Int>  = mutableListOf()
-        val modifyIndexes:MutableList<Int>  = mutableListOf()
-        val modifyUvmIns:MutableList<UvmInstruction>  = mutableListOf()
-        var AddEvalStackSizeIndex:Int = -1
-        var SetEvalStackTopIndex:Int = -1
-        val UvmInstCount:Int = CodeInstructions.count()
-        var affectedSlot:String = ""
-        var uvmInsstr:String = ""
-        var commentIndex:Int = -1
-        var constStr:String = ""
-        var commentPrefix:String = ""
+        val delIndexes: MutableList<Int> = mutableListOf()
+        val modifyIndexes: MutableList<Int> = mutableListOf()
+        val modifyUvmIns: MutableList<UvmInstruction> = mutableListOf()
+        var AddEvalStackSizeIndex: Int = -1
+        var SetEvalStackTopIndex: Int = -1
+        val UvmInstCount: Int = CodeInstructions.count()
+        var affectedSlot: String = ""
+        var uvmInsstr: String = ""
+        var commentIndex: Int = -1
+        var constStr: String = ""
+        var commentPrefix: String = ""
         var lastInst: UvmInstruction? = null
 
-        for(gIndex in 0..(UvmInstCount - 1))
-        {
+        for (gIndex in 0..(UvmInstCount - 1)) {
             var oldLastInst = lastInst
             val uvmIns: UvmInstruction = CodeInstructions[gIndex]
-            if (uvmIns.jvmInstruction == null)
-            {
+            if (uvmIns.jvmInstruction == null) {
                 continue
             }
             lastInst = uvmIns
 
-            if (uvmIns.hasLocationLabel())
-            {
+            if (uvmIns.hasLocationLabel()) {
                 AddEvalStackSizeIndex = -1
                 SetEvalStackTopIndex = -1
             }
 
             uvmInsstr = uvmIns.toString().trim()
             commentIndex = uvmInsstr.indexOf(";")
-            if (commentIndex >= 0)
-            {
+            if (commentIndex >= 0) {
                 commentPrefix = "" + uvmInsstr.substring(commentIndex)
                 uvmInsstr = uvmInsstr.substring(0, commentIndex)
-            }
-            else
-            {
+            } else {
                 commentPrefix = ""
             }
             val ss = uvmInsstr.split(" ")
 
             val evalOp: EvalStackOpEnum = CodeInstructions[gIndex].evalStackOp
-            when (evalOp)
-            {
-                EvalStackOpEnum.valueOf("AddEvalStackSize")->
-                {
+            when (evalOp) {
+                EvalStackOpEnum.valueOf("AddEvalStackSize") -> {
 
                     AddEvalStackSizeIndex = gIndex
                     SetEvalStackTopIndex = -1
                 }
-                EvalStackOpEnum.valueOf("SetEvalStackTop")->
-                {
-                    if (!uvmInsstr.startsWith("settable"))
-                    {
+                EvalStackOpEnum.valueOf("SetEvalStackTop") -> {
+                    if (!uvmInsstr.startsWith("settable")) {
                         throw GjavacException("error ReduceUvmInsts,invalid uvm inst:" + uvmInsstr)
                     }
                     var ssCount = ss.count()
-                    if (ssCount == 4)
-                    {
+                    if (ssCount == 4) {
                         affectedSlot = ss[3].trim()
                         checkSlot(affectedSlot)
-                    }
-                    else if (ssCount >= 5)
-                    {
+                    } else if (ssCount >= 5) {
                         affectedSlot = ""
                         constStr = ss[3]
-                        for(j in 4..(ssCount - 1))
-                        {
+                        for (j in 4..(ssCount - 1)) {
                             constStr = constStr + " " + ss[j]
                         }
                         checkConstStr(constStr)
-                    }
-                    else
-                    {
+                    } else {
                         throw GjavacException("error ReduceUvmInsts,inst count err, invalid uvm inst:" + uvmInsstr)
                     }
                     SetEvalStackTopIndex = gIndex
                     AddEvalStackSizeIndex = -1
                 }
-                EvalStackOpEnum.valueOf("SubEvalStackSize")->
-                {
-                    if (AddEvalStackSizeIndex != -1)
-                    {
-                        if (uvmIns.hasLocationLabel() || CodeInstructions[AddEvalStackSizeIndex].hasLocationLabel())
-                        {
+                EvalStackOpEnum.valueOf("SubEvalStackSize") -> {
+                    if (AddEvalStackSizeIndex != -1) {
+                        if (uvmIns.hasLocationLabel() || CodeInstructions[AddEvalStackSizeIndex].hasLocationLabel()) {
                             print("do not remove, locactionmap needed \n")
-                        }
-                        else
-                        {
+                        } else {
                             delIndexes.add(AddEvalStackSizeIndex)
                             delIndexes.add(gIndex)
                             print("find add-sub evalsize group, index " + AddEvalStackSizeIndex + "," + gIndex + "\n")
@@ -1867,39 +1839,27 @@ open class JavaToUvmTranslator {
                     AddEvalStackSizeIndex = -1
                     SetEvalStackTopIndex = -1
                 }
-                EvalStackOpEnum.valueOf("GetEvalStackTop")->
-                {
-                    if (SetEvalStackTopIndex != -1)
-                    {
-                        if (!uvmInsstr.startsWith("gettable"))
-                        {
+                EvalStackOpEnum.valueOf("GetEvalStackTop") -> {
+                    if (SetEvalStackTopIndex != -1) {
+                        if (!uvmInsstr.startsWith("gettable")) {
                             throw GjavacException("error ReduceUvmInsts,invalid uvm inst:" + uvmInsstr)
                         }
-                        if (ss.count() != 4)
-                        {
+                        if (ss.count() != 4) {
                             throw GjavacException("error ReduceUvmInsts,inst count err, invalid uvm inst:" + uvmInsstr)
                         }
                         var targetSlot = ss[1]
                         var inst: UvmInstruction
-                        if (affectedSlot.startsWith("%"))
-                        {
+                        if (affectedSlot.startsWith("%")) {
                             inst = proto.makeInstructionLine("move " + targetSlot + " " + affectedSlot + commentPrefix + ";get from slot", uvmIns.jvmInstruction)
-                        }
-                        else if (constStr.startsWith("const "))
-                        {
+                        } else if (constStr.startsWith("const ")) {
                             inst = proto.makeInstructionLine("loadk " + targetSlot + " " + constStr + commentPrefix + ";get from slot", uvmIns.jvmInstruction)
-                        }
-                        else
-                        {
+                        } else {
                             throw GjavacException("error ReduceUvmInsts,invalid uvm inst:" + uvmInsstr)
                         }
 
-                        if (CodeInstructions[SetEvalStackTopIndex].hasLocationLabel())
-                        {
+                        if (CodeInstructions[SetEvalStackTopIndex].hasLocationLabel()) {
                             print("do not remove, locactionmap needed \n")
-                        }
-                        else
-                        {
+                        } else {
                             delIndexes.add(SetEvalStackTopIndex)
                             modifyIndexes.add(gIndex)
                             modifyUvmIns.add(inst)
@@ -1909,34 +1869,24 @@ open class JavaToUvmTranslator {
                     AddEvalStackSizeIndex = -1
                     SetEvalStackTopIndex = -1
                 }
-                else ->
-                {
-                    if (SetEvalStackTopIndex != -1)
-                    {
-                        if (affectedSlot.length > 1)
-                        {
-                            if (ss.contains(affectedSlot))
-                            {
+                else -> {
+                    if (SetEvalStackTopIndex != -1) {
+                        if (affectedSlot.length > 1) {
+                            if (ss.contains(affectedSlot)) {
                                 print("do not remove , affect slot:" + affectedSlot + "\n")
                                 SetEvalStackTopIndex = -1
-                            }
-                            else if (ss[0].equals("call")||ss[0].equals("tailcall"))
-                            {
-                                var slotIndex:Int = ss[1].substring(1).toInt()
-                                var argcount:Int = ss[2].toInt()
-                                var resultcount:Int = ss[3].toInt()
-                                    var j:Int = 0
-                                for(j in 0..(resultcount - 2))
-                                {
-                                    if (affectedSlot.equals("%" + j))
-                                    {
+                            } else if (ss[0].equals("call") || ss[0].equals("tailcall")) {
+                                var slotIndex: Int = ss[1].substring(1).toInt()
+                                var argcount: Int = ss[2].toInt()
+                                var resultcount: Int = ss[3].toInt()
+                                var j: Int = 0
+                                for (j in 0..(resultcount - 2)) {
+                                    if (affectedSlot.equals("%" + j)) {
                                         print("do not remove , in call inst:" + uvmInsstr + "affect slot:" + affectedSlot + "\n")
                                         SetEvalStackTopIndex = -1
                                     }
                                 }
-                            }
-                            else if (ss[0].equals("return"))
-                            {
+                            } else if (ss[0].equals("return")) {
                                 SetEvalStackTopIndex = -1
                                 AddEvalStackSizeIndex = -1
                             }
@@ -1945,14 +1895,14 @@ open class JavaToUvmTranslator {
                 }
             }
             // push %a, pop %b => move %b %a when no labels betweem them
-            if(oldLastInst!=null && oldLastInst.asmLine.startsWith("push ") && uvmIns.asmLine.startsWith("pop ")) {
+            if (oldLastInst != null && oldLastInst.asmLine.startsWith("push ") && uvmIns.asmLine.startsWith("pop ")) {
                 // check whether has labels of gIndex
-                if(!uvmIns.hasLocationLabel() && !oldLastInst.hasLocationLabel()) {
+                if (!uvmIns.hasLocationLabel() && !oldLastInst.hasLocationLabel()) {
                     if (oldLastInst.args.size > 0 && uvmIns.args.size > 0) {
                         delIndexes += gIndex - 1
                         val fromPos = oldLastInst.args[0] as Int
                         val toPos = uvmIns.args[0] as Int
-                        if(fromPos != toPos) {
+                        if (fromPos != toPos) {
                             val inst = proto.makeInstructionLine("move %$toPos %$fromPos ;${oldLastInst.asmLine} ;${uvmIns.asmLine}", uvmIns.jvmInstruction)
 //                        if(oldLastInst.hasLocationLabel()) {
 //                            inst.locationLabel = oldLastInst.locationLabel
@@ -1969,19 +1919,15 @@ open class JavaToUvmTranslator {
         }
 
 
+        var delcount: Int = delIndexes.count()
 
-        var delcount:Int = delIndexes.count()
-
-        for( mi in modifyIndexes)
-        {
+        for (mi in modifyIndexes) {
             proto.codeInstructions[mi] = modifyUvmIns[modifyIndexes.indexOf(mi)]
         }
 
         //删除delindex对应的指令
-        if (delcount > 0)
-        {
-            for(j in 0..(delcount-1))
-            {
+        if (delcount > 0) {
+            for (j in 0..(delcount - 1)) {
                 val toDeleteInst = proto.codeInstructions[delIndexes[j]]
                 var instr = toDeleteInst.toString()
                 val emptyInst = proto.makeEmptyInstruction(";deleted inst;original inst:" + instr)
@@ -1991,35 +1937,106 @@ open class JavaToUvmTranslator {
         }
 
         //调整location map
-        var needLocCount:Int = proto.neededLocationsMap.count()
-        if (needLocCount > 0 && delcount > 0)
-        {
+        var needLocCount: Int = proto.neededLocationsMap.count()
+        if (needLocCount > 0 && delcount > 0) {
             val locationMap: MutableMap<Int, String> = mutableMapOf()
-            for (loc in proto.neededLocationsMap)
-            {
-                var newKey:Int = loc.key - getLtCount(delIndexes, loc.key)
+            for (loc in proto.neededLocationsMap) {
+                val newKey: Int = loc.key - getLtCount(delIndexes, loc.key)
                 checkLoctionMoveRight(loc.key, newKey, proto)
                 locationMap.put(newKey, loc.value)
             }
 
             proto.neededLocationsMap.clear()
-            for (loc in locationMap)
-            {
-                proto.neededLocationsMap.put(loc.key, loc.value)
-            }
+            proto.neededLocationsMap.putAll(locationMap)
         }
         print("reduce codeslines =" + delIndexes.count() + "\n")
+
+        // move %a %b, pop %a => pop %a, etc.
+        val setAndNotGetSlots = mutableMapOf<Int, UvmInstruction>()
+        var idxToReduce = 0
+        while (idxToReduce < proto.codeInstructions.size) {
+            val inst = proto.codeInstructions[idxToReduce]
+            val readSlots = inst.needReadRegisterSlots()
+            val writeSlots = inst.needSetRegisterSlots()
+            // 当inst有label的时候，之前的setAndNotSet不会失效，因为jvm的label跳转只要保留eval stack
+            for (pos in readSlots) {
+                if (setAndNotGetSlots.containsKey(pos)) {
+                    setAndNotGetSlots.remove(pos)
+                }
+            }
+            for (pos in writeSlots) {
+                val savedInst = setAndNotGetSlots[pos]
+                if (savedInst != null) {
+                    // 之前的旧指令可以移除，如果不带有label的话
+                    if (!savedInst.hasLocationLabel() && savedInst.isJustChangeSlotOp()) {
+                        // remove it
+                        val toRemoveIndex = proto.codeInstructions.indexOf(savedInst)
+                        val notEmptyInstructionsOfProto = proto.notEmptyCodeInstructions()
+                        val notEmptyToRemoveIndex = notEmptyInstructionsOfProto.indexOf(savedInst)
+                        proto.codeInstructions[toRemoveIndex] = proto.makeEmptyInstruction(";" + proto.codeInstructions[toRemoveIndex].asmLine)
+                        // adjust locationMaps
+                        if (proto.neededLocationsMap.isNotEmpty()) {
+                            val locationMap: MutableMap<Int, String> = mutableMapOf()
+                            for (loc in proto.neededLocationsMap) {
+                                val newKey: Int = loc.key - getLtCount(mutableListOf<Int>(notEmptyToRemoveIndex), loc.key)
+                                locationMap.put(newKey, loc.value)
+                            }
+                            proto.neededLocationsMap.clear()
+                            proto.neededLocationsMap.putAll(locationMap)
+                            rebuildNeededLocationsMap(proto)
+                        }
+                        setAndNotGetSlots.remove(pos)
+                        continue
+                    }
+                }
+                setAndNotGetSlots[pos] = inst
+            }
+
+            if (idxToReduce > 0) {
+                val lastInst = proto.codeInstructions[idxToReduce - 1]
+                val opName = inst.opName()
+                val lastOpName = lastInst.opName()
+                if (inst.isSetFirstArgOp() && (lastOpName == "move" || lastOpName == "loadk") && inst.getArg(0) == lastInst.getArg(0)
+                        && !inst.hasArgNotFirstPosition(inst.getArg(0).toString())
+                        && lastOpName != "pop"
+                        && !lastInst.hasLocationLabel() && !proto.neededLocationsMap.containsKey(idxToReduce - 1)) {
+                    //  => pop %a
+                    val toRemoveIndex = idxToReduce - 1
+                    val notEmptyInstructionsOfProto = proto.notEmptyCodeInstructions()
+                    val notEmptyToRemoveIndex = notEmptyInstructionsOfProto.indexOf(lastInst)
+                    proto.codeInstructions[toRemoveIndex] = proto.makeEmptyInstruction(";" + proto.codeInstructions[toRemoveIndex].asmLine)
+                    // adjust locationMaps
+                    if (proto.neededLocationsMap.isNotEmpty()) {
+                        val locationMap: MutableMap<Int, String> = mutableMapOf()
+                        for (loc in proto.neededLocationsMap) {
+                            val newKey: Int = loc.key - getLtCount(mutableListOf<Int>(notEmptyToRemoveIndex), loc.key)
+//                            checkLoctionMoveRight(loc.key, newKey, proto)
+                            locationMap.put(newKey, loc.value)
+                        }
+                        proto.neededLocationsMap.clear()
+                        proto.neededLocationsMap.putAll(locationMap)
+                        rebuildNeededLocationsMap(proto)
+                    }
+//                    idxToReduce++ // when reduced, don't need to iterator to next line
+                    continue
+                }
+                // TODO: push %a, pop %b => move %b %a
+                // TODO: when set some register, not use it until rewrite it/end of label scope, without labels in code range, need optimize it
+                // TODO: multi invoke print/pprint in a function, can put them together
+            }
+            idxToReduce++
+        }
+
+
         return delcount
     }
 
-    fun ReduceProtoUvmInsts(proto: UvmProto)
-    {
+    fun ReduceProtoUvmInsts(proto: UvmProto) {
         print("begin reduce: proto name = " + proto.name + " totalLines = " + proto.codeInstructions.count() + "\n")
-        var r:Int = 0
-        var totalReduceLines:Int = 0
-        var idx:Int = 0
-        do
-        {
+        var r: Int = 0
+        var totalReduceLines: Int = 0
+        var idx: Int = 0
+        do {
             println("idx=" + idx + " , reduce proto begin:" + proto.name)
             r = ReduceUvmInstsImp(proto)
             totalReduceLines = totalReduceLines + r
