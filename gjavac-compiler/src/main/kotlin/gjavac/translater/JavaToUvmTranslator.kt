@@ -1964,6 +1964,7 @@ open class JavaToUvmTranslator {
                     setAndNotGetSlots.remove(pos)
                 }
             }
+            // TODO: concat %a %b %c, move %d %a, not read %a until write/end => concat %d %b %c
             for (pos in writeSlots) {
                 val savedInst = setAndNotGetSlots[pos]
                 if (savedInst != null) {
@@ -2021,6 +2022,8 @@ open class JavaToUvmTranslator {
                     continue
                 }
                 // TODO: push %a, pop %b => move %b %a
+                // TODO: move %a %b, move %c %a, pop %a => move %c %b, pop %a
+                // TODO: concat %a %b %c, move %d %a, not read %a until write/end => concat %d %b %c
                 // TODO: when set some register, not use it until rewrite it/end of label scope, without labels in code range, need optimize it
                 // TODO: multi invoke print/pprint in a function, can put them together
             }
@@ -2045,6 +2048,6 @@ open class JavaToUvmTranslator {
         println("proto name = " + proto.name + " totalReduceLines = " + totalReduceLines + " , now totalLines = " + proto.codeInstructions.count() + "\n")
     }
 
-    // TODO: 所有方法作为main func的subrouting和localvar
+    // TODO: all methods translated as main func's subrouting and localvar
 
 }
