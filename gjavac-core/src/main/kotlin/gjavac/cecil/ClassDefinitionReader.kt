@@ -1,5 +1,6 @@
 package gjavac.cecil
 
+import gjavac.exceptions.GjavacException
 import gjavac.utils.MethodTypeInfo
 import gjavac.utils.TypeInfo
 import gjavac.utils.use
@@ -106,6 +107,10 @@ class ClassDefinitionReader {
   fun readClass(clsPaths: List<String>): ModuleDefinition {
     val module = ModuleDefinition()
     for(clsPath in clsPaths) {
+      if(!File(clsPath).exists()) {
+        throw GjavacException("Can't find class file ${clsPath}")
+      }
+      println("reading class ${clsPath}")
       use(FileInputStream(File(clsPath))) { clsInputStream ->
         val clsReader = ClassReader(clsInputStream)
         val printWriter = PrintWriter(System.out)
