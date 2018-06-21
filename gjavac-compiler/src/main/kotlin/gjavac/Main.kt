@@ -1,19 +1,34 @@
 package gjavac
 
+import com.xenomachina.argparser.ArgParser
 import gjavac.cecil.ClassDefinitionReader
 import gjavac.translater.JavaToUvmTranslator
 import gjavac.utils.use
 import java.io.*
+import java.nio.file.Paths
 
 fun main(args: Array<String>) {
+
     val classDefReader = ClassDefinitionReader()
     val classesPaths = mutableListOf<String>()
     if(args.isEmpty()) {
         println("need pass to compile java bytecode class filepaths as argument")
         return
     }
+    var outputDir = Paths.get(".").toAbsolutePath().normalize().toString()
+    var beforeIsGangO = false
     for(i in 0..(args.size-1)) {
         var path = args[i]
+        if(path.trim()=="-o" && (i+1) < args.size) {
+            // -o output dir
+            beforeIsGangO = true
+            continue
+        }
+        if(beforeIsGangO) {
+            outputDir = args[i].trim()
+            beforeIsGangO = false
+            continue
+        }
         if(!path.endsWith(".class"))
             path += ".class"
         classesPaths.add(path)
@@ -23,14 +38,17 @@ fun main(args: Array<String>) {
     val jvmContentBuilder = StringBuilder()
     val uvmAssBuilder = StringBuilder()
     translator.translateModule(moduleDef, jvmContentBuilder, uvmAssBuilder)
-    val outFilename = "result.ass"
+
+    println("output dir: $outputDir")
+
+    val outFilename = outputDir + File.separator + "result.ass"
     use(FileOutputStream(File(outFilename)), { fos ->
         val bw = BufferedWriter(PrintWriter(fos))
         bw.write(uvmAssBuilder.toString())
         bw.flush()
     })
     val metaInfoJson = translator.getMetaInfoJson()
-    val metaOutputfilename = "result.meta.json"
+    val metaOutputfilename = outputDir + File.separator +"result.meta.json"
     use(FileOutputStream(File(metaOutputfilename)), { fos ->
         val bw = BufferedWriter(PrintWriter(fos))
         bw.write(metaInfoJson)

@@ -1949,7 +1949,7 @@ open class JavaToUvmTranslator {
             proto.neededLocationsMap.clear()
             proto.neededLocationsMap.putAll(locationMap)
         }
-        print("reduce codeslines =" + delIndexes.count() + "\n")
+//        print("reduce codeslines =" + delIndexes.count() + "\n")
 
         // move %a %b, pop %a => pop %a, etc.
         val setAndNotGetSlots = mutableMapOf<Int, UvmInstruction>()
@@ -2035,17 +2035,17 @@ open class JavaToUvmTranslator {
     }
 
     fun ReduceProtoUvmInsts(proto: UvmProto) {
-        print("begin reduce: proto name = " + proto.name + " totalLines = " + proto.codeInstructions.count() + "\n")
+//        print("begin reduce: proto name = " + proto.name + " totalLines = " + proto.codeInstructions.count() + "\n")
         var r: Int = 0
         var totalReduceLines: Int = 0
         var idx: Int = 0
         do {
-            println("idx=" + idx + " , reduce proto begin:" + proto.name)
+//            println("idx=" + idx + " , reduce proto begin:" + proto.name)
             r = ReduceUvmInstsImp(proto)
             totalReduceLines = totalReduceLines + r
             idx++
         } while (r > 0)
-        println("proto name = " + proto.name + " totalReduceLines = " + totalReduceLines + " , now totalLines = " + proto.codeInstructions.count() + "\n")
+//        println("proto name = " + proto.name + " totalReduceLines = " + totalReduceLines + " , now totalLines = " + proto.codeInstructions.count() + "\n")
     }
 
     // TODO: all methods translated as main func's subrouting and localvar
