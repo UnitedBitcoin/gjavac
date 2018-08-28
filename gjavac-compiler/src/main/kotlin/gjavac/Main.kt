@@ -12,18 +12,34 @@ fun main(args: Array<String>) {
         println("need pass to compile java bytecode class filepaths as argument")
         return
     }
-    for(i in 0..(args.size-1)) {
+    var i = 0
+    var outputPath = ""
+    while(i <=(args.size-1)) {
         var path = args[i]
-        if(!path.endsWith(".class"))
-            path += ".class"
-        classesPaths.add(path)
+        if(path == "-o"){
+            i++;
+            if(i<=(args.size-1)){
+                outputPath = args[i]
+            }
+        }
+        else if(!path.endsWith(".class")){
+            path = path +".class"
+            classesPaths.add(path)
+        }
+        else{
+            classesPaths.add(path)
+        }
+        i++;
     }
     val moduleDef = classDefReader.readClass(classesPaths)
     val translator = JavaToUvmTranslator()
     val jvmContentBuilder = StringBuilder()
     val uvmAssBuilder = StringBuilder()
     translator.translateModule(moduleDef, jvmContentBuilder, uvmAssBuilder)
-    val outFilename = "result.ass"
+    var outFilename = "result.ass"
+    if(outputPath.length>0){
+        outFilename = outputPath + "/" + outFilename
+    }
     use(FileOutputStream(File(outFilename)), { fos ->
         val bw = BufferedWriter(PrintWriter(fos))
         bw.write(uvmAssBuilder.toString())

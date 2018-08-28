@@ -6,12 +6,10 @@ import gjavac.cecil.MethodInfo
 import gjavac.core.UvmTypeInfoEnum
 import gjavac.core.StorageValueTypes
 import gjavac.exceptions.GjavacException
-import gjavac.lib.Component
-import gjavac.lib.UvmContract
-import gjavac.lib.IUvmEventEmitter
-import gjavac.lib.Offline
+import gjavac.lib.*
 import org.apache.commons.lang3.StringEscapeUtils
 import kotlin.reflect.jvm.jvmName
+
 
 class TranslatorUtils {
     companion object {
@@ -105,6 +103,7 @@ class TranslatorUtils {
                     continue
                 }
                 val methodName = methodDefinition.name ?: continue
+                //if(methodName == "init")continue
                 // 要求公开且非构造函数的方法必须都是API
                 contractApiNames.add(methodName)
                 if(methodDefinition.annotations.firstOrNull {t -> Offline::class.java.isAssignableFrom(t.typeClass())}!=null) {
@@ -181,13 +180,18 @@ class TranslatorUtils {
             if (typeFullName == "boolean" || typeFullName == "java.lang.Boolean") {
                 return StorageValueTypes.storage_value_bool;
             }
+            if(typeFullName == UvmArray::class.java.canonicalName) {
+                return StorageValueTypes.storage_value_unknown_array // TODO: more specific type
+            }
+            if(typeFullName==UvmMap::class.java.canonicalName) {
+                return StorageValueTypes.storage_value_unknown_table // TODO: more specific type
+            }
             throw GjavacException("not supported storage value type $typeFullName now");
         }
 
-        fun getStorageValueTypeFromType(typeRef: ClassDefinition): StorageValueTypes {
-            val typeFullName = typeRef.name
-            return getStorageValueTypeFromTypeName(typeFullName)
-        }
+//        fun getStorageValueTypeFromType(typeRef: ClassDefinition): StorageValueTypes {
+//            return getStorageValueTypeFromTypeName(typeFullName)
+//        }
 
         fun getUvmTypeInfoFromType(typeRef: TypeInfo): UvmTypeInfoEnum {
             var typeFullName = typeRef.fullName();
