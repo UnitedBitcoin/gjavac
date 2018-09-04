@@ -200,7 +200,7 @@ class UvmProto {
 
         builder.append(".begin_upvalue\r\n")
         for (upvalue in upvalues) {
-            builder.append("\t" + (if (upvalue.instack) 1 else 0) + " " + upvalue.idx + "\r\n")
+            builder.append("\t" + (if (upvalue.instack) 1 else 0) + " " + upvalue.idx + " \"" +upvalue.name +"\"" +"\r\n")
         }
         builder.append(".end_upvalue\r\n")
 
