@@ -119,57 +119,59 @@ open class JavaToUvmTranslator {
                 this.contractStoragePropertiesTypes[storagePropName] = storageValueType
             }
         }
+        
+        val topProto = translateTopJvmType(mainTypes[0],jvmContentBuilder,luaAsmBuilder,utilTypes,contractType_)
+        luaAsmBuilder.append(topProto.toUvmAss(true))
+    }
 
-        // TODO: other utils types
-
+    fun translateTopJvmType(topType:ClassDefinition,jvmContentBuilder: StringBuilder,
+                         luaAsmBuilder: StringBuilder, utilTypes:List<ClassDefinition>,contractType:ClassDefinition): UvmProto{
         val buildResultProtos = mutableListOf<UvmProto>()
-        var mainProto: UvmProto? = null
-        for (typeDefinition in mainTypes) {
-            val proto = translateJvmType(typeDefinition, jvmContentBuilder, luaAsmBuilder, true, null)
-            buildResultProtos.add(proto)
-            proto.internUpvalue("ENV")
-            mainProto = proto
-        }
-        if(mainProto==null){
+        var topProto: UvmProto? = null
+        val proto = UvmProto(TranslatorUtils.makeProtoNameOfTypeConstructor(topType)) //合约内main方法所属的class作为整个合约的mainproto
+        buildResultProtos.add(proto)
+        proto.internUpvalue("ENV")
+        topProto = proto
+
+        if(topProto==null){
             throw GjavacException("mainProto is null")
         }
-        var secondMainProto: UvmProto? = null
+        var codeMainProto: UvmProto? = null  //合约内的main方法
         var tableSlot = 0;
         var tempslot = utilTypes.size + 1;
-        mainProto.addInstructionLine("newtable %" + tableSlot + " 0 0", null)
+        topProto.addInstructionLine("newtable %" + tableSlot + " 0 0", null)
         for (utilType in utilTypes) {
             //utilProto直属于mainProto
-            val utilProto = translateJvmType(utilType, jvmContentBuilder, luaAsmBuilder, false, mainProto)
+            val utilProto = translateJvmType(utilType, jvmContentBuilder, luaAsmBuilder,  topProto)
             //utilProto.parent = mainProto
             // 将utilProto在mainProto里closure化，作为mainProto的一个locvar，之后contractProto里可通过upval方式访问到
-            mainProto.internConstantValue(utilProto.name)
-            var slotIndex = mainProto.subProtos.size + 1
-            mainProto.addInstructionLine("closure %" + tempslot + " " + utilProto.name, null)
-            mainProto.addInstructionLine("call %" + tempslot + " " + ( 1) + " " + (2), null)
-            mainProto.addInstructionLine("move %" + slotIndex + " %" + tempslot, null)
+            topProto.internConstantValue(utilProto.name)
+            var slotIndex = topProto.subProtos.size + 1
+            topProto.addInstructionLine("closure %" + tempslot + " " + utilProto.name, null)
+            topProto.addInstructionLine("call %" + tempslot + " " + ( 1) + " " + (2), null)
+            topProto.addInstructionLine("move %" + slotIndex + " %" + tempslot, null)
             val subProtoName = utilProto.name
             if (subProtoName == null) {
                 throw GjavacException("null method proto name")
             }
-            mainProto.locvars.add(UvmLocVar(subProtoName, slotIndex))
-            mainProto.subProtos.add(utilProto)
+            topProto.locvars.add(UvmLocVar(subProtoName, slotIndex))
+            topProto.subProtos.add(utilProto)
         }
-        /* main proto*/
+        /* top proto*/
         var mainFullName = "";
-        var typeDefinition = mainTypes[0]
-        var tmp1Slot = typeDefinition.methods.size + mainProto.subProtos.size + 1;
-        for (m in typeDefinition.methods) {
-            var methodProto = translateJvmMethod(m, jvmContentBuilder, luaAsmBuilder, mainProto)
+        var tmp1Slot = topType.methods.size + topProto.subProtos.size + 1;
+        for (m in topType.methods) {
+            var methodProto = translateJvmMethod(m, jvmContentBuilder, luaAsmBuilder, topProto)
             if (methodProto == null) {
                 continue
             }
             // 把各成员函数加入slots
-            mainProto.internConstantValue(methodProto.name)
-            var slotIndex = mainProto.subProtos.size + 1
-            mainProto.addInstructionLine("closure %" + slotIndex + " " + methodProto.name, null)
-            mainProto.internConstantValue(m.name)
-            mainProto.addInstructionLine("loadk %" + tmp1Slot + " const \"" + m.name + "\"", null)
-            mainProto.addInstructionLine(
+            topProto.internConstantValue(methodProto.name)
+            var slotIndex = topProto.subProtos.size + 1
+            topProto.addInstructionLine("closure %" + slotIndex + " " + methodProto.name, null)
+            topProto.internConstantValue(m.name)
+            topProto.addInstructionLine("loadk %" + tmp1Slot + " const \"" + m.name + "\"", null)
+            topProto.addInstructionLine(
                     "settable %" + tableSlot + " %" + tmp1Slot + " %" + slotIndex, null)
             val methodProtoName = methodProto.name
             if (methodProtoName == null) {
@@ -177,49 +179,41 @@ open class JavaToUvmTranslator {
             }
             if(m.name =="main"){
                 mainFullName = methodProtoName
-                secondMainProto = methodProto
+                codeMainProto = methodProto
             }
-            mainProto.locvars.add(UvmLocVar(methodProtoName, slotIndex))
-            mainProto.subProtos.add(methodProto)
+            topProto.locvars.add(UvmLocVar(methodProtoName, slotIndex))
+            topProto.subProtos.add(methodProto)
         }
 
-        mainProto.maxStackSize = tmp1Slot + 1
+        topProto.maxStackSize = tmp1Slot + 1
 
-        mainProto.maxStackSize = tmp1Slot + 4;
-        var mainFuncSlot = mainProto.subProtos.size + 2; // proto.SubProtos.IndexOf(mainProto) + 1;
-        mainProto.addInstructionLine("loadk %" + (mainFuncSlot+1) + " const \"main\"", null)
-        mainProto.addInstructionLine("gettable %" + mainFuncSlot + " %0 %" + (mainFuncSlot+1), null)
-        mainProto.addInstructionLine("move %" + (mainFuncSlot + 1) + " %0", null)
-        var returnCount = if (mainProto.method?.signature?.returnType?.fullName() != "void") 1 else 0
+        topProto.maxStackSize = tmp1Slot + 4;
+        var mainFuncSlot = topProto.subProtos.size + 2; // proto.SubProtos.IndexOf(mainProto) + 1;
+        topProto.addInstructionLine("loadk %" + (mainFuncSlot+1) + " const \"main\"", null)
+        topProto.addInstructionLine("gettable %" + mainFuncSlot + " %0 %" + (mainFuncSlot+1), null)
+        topProto.addInstructionLine("move %" + (mainFuncSlot + 1) + " %0", null)
+        var returnCount = if (topProto.method?.signature?.returnType?.fullName() != "void") 1 else 0
         var argsCount = 1;
-        mainProto.addInstructionLine("call %" + mainFuncSlot + " " + (argsCount + 1) + " " + (returnCount + 1), null)
+        topProto.addInstructionLine("call %" + mainFuncSlot + " " + (argsCount + 1) + " " + (returnCount + 1), null)
         if (returnCount > 0) {
-            mainProto.addInstructionLine("return %" + mainFuncSlot + " " + (returnCount + 1), null)
+            topProto.addInstructionLine("return %" + mainFuncSlot + " " + (returnCount + 1), null)
         }
-        mainProto.addInstructionLine("return %0 1", null)
+        topProto.addInstructionLine("return %0 1", null)
         /**/
 
         var contractProto: UvmProto? = null
-        if (contractType_ != null) {
-            contractProto = translateJvmType(contractType_, jvmContentBuilder, luaAsmBuilder, false, secondMainProto)
-            secondMainProto?.subProtos?.add(contractProto)
+        if (contractType != null) {
+            contractProto = translateJvmType(contractType, jvmContentBuilder, luaAsmBuilder, codeMainProto)
+            codeMainProto?.subProtos?.add(contractProto) //合约class的proto从属于main函数的proto
         }
-
-        for (proto in buildResultProtos) {
-            luaAsmBuilder.append(proto.toUvmAss(true))
-        }
+        return topProto;
 
     }
 
     fun translateJvmType(typeDefinition: ClassDefinition, jvmContentBuilder: StringBuilder,
-                         luaAsmBuilder: StringBuilder, isMainType: Boolean, parentProto: UvmProto?): UvmProto {
+                         luaAsmBuilder: StringBuilder,  parentProto: UvmProto?): UvmProto {
         val proto = UvmProto(TranslatorUtils.makeProtoNameOfTypeConstructor(typeDefinition))
-        if(isMainType)return proto;
-
         proto.parent = parentProto
-//        if (parentProto != null) {
-//            parentProto.subProtos.add(proto)
-//        }
 
         // 把类型转换成的proto被做成有一些slot指向成员函数的构造函数，保留slot指向成员函数是为了方便子对象upval访问(不一定需要)
         var tableSlot = 0;
@@ -248,23 +242,9 @@ open class JavaToUvmTranslator {
         }
 
         proto.maxStackSize = tmp1Slot + 1
-        val mainProto = proto.findMainProto()
-        if (mainProto != null && isMainType) {
-            proto.maxStackSize = tmp1Slot + 4;
-            var mainFuncSlot = proto.subProtos.size + 2; // proto.SubProtos.IndexOf(mainProto) + 1;
-            proto.addInstructionLine("closure %" + mainFuncSlot + " " + mainProto.name, null)
-            proto.addInstructionLine("move %" + (mainFuncSlot + 1) + " %0", null)
-            var returnCount = if (mainProto.method?.signature?.returnType?.fullName() != "void") 1 else 0
-            var argsCount = 1;
-            proto.addInstructionLine("call %" + mainFuncSlot + " " + (argsCount + 1) + " " + (returnCount + 1), null)
-            if (returnCount > 0) {
-                proto.addInstructionLine("return %" + mainFuncSlot + " " + (returnCount + 1), null)
-            }
-            proto.addInstructionLine("return %0 1", null)
-        } else {
+
             proto.addInstructionLine("return %" + tableSlot + " 2", null) // 构造函数的返回值
             proto.addInstructionLine("return %0 1", null)
-        }
 
         return proto
     }
@@ -1378,7 +1358,28 @@ open class JavaToUvmTranslator {
                     //isUserDefinedInTableFunc = true
                     needPopFirstArg = true
                     hasThis = false
-                }//TranslatorUtils.isComponentClass(it)
+                }
+                else if(TranslatorUtils.isComponentClass(Class.forName(calledTypeName))&& targetFuncName.length < 1){ //调用工具类
+                    var protoMethodClassName = proto.method?.signature?.classDef?.name?.replace('/', '.')
+                    if(calledTypeName.equals(protoMethodClassName)){  //工具类function调用本工具类function,通过从自己table中获取
+                        isUserDefineFunc = true
+                        targetFuncName = methodName
+                        isUserDefinedInTableFunc = false  //调用工具类
+                        needPopFirstArg = false
+                    }
+                    else if(protoMethodClassName.equals(this.contractType?.name)){ //合约function调用工具类,通过gettabup来取
+                        isUserDefineFunc = true
+                        targetFuncName = methodName
+                        isUserDefinedInTableFunc = true  //调用工具类
+                        needPopFirstArg = false
+                    }
+                    else{ //工具类调用其他工具类 ....通过gettabup来取
+                        isUserDefineFunc = true
+                        targetFuncName = methodName
+                        isUserDefinedInTableFunc = true  //调用工具类
+                        needPopFirstArg = false
+                    }
+                }
                 else if (!calledTypeName.equals(proto.method?.signature?.classDef?.name?.replace('/', '.')) && targetFuncName.length < 1) {
                     // 调用工具类的方法 Class.forName(
                     if(TranslatorUtils.isComponentClass(Class.forName(calledTypeName))){
@@ -1396,7 +1397,7 @@ open class JavaToUvmTranslator {
                     preaddParamsCount = 1
                 }
 
-                if(!isUserDefinedInTableFunc) {
+                if(!TranslatorUtils.isComponentClass(Class.forName(calledTypeName))) {
                     // 如果methodName是setXXXX或者getXXXX，则是java的属性操作，转换成uvm的table属性读写操作
                     if (hasThis && methodName.startsWith("set") && methodName.length >= 4 && methodParams.size == 1 // TODO
                             && (targetFuncName == "" || targetFuncName == methodName)) {
