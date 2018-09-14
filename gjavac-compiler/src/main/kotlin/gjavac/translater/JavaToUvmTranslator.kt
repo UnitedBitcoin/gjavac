@@ -126,16 +126,18 @@ open class JavaToUvmTranslator {
 
     fun translateTopJvmType(topType:ClassDefinition,jvmContentBuilder: StringBuilder,
                          luaAsmBuilder: StringBuilder, utilTypes:List<ClassDefinition>,contractType:ClassDefinition): UvmProto{
-        val buildResultProtos = mutableListOf<UvmProto>()
+        if(topType==null || contractType==null){
+            throw GjavacException("topType null or contractType null")
+        }
         var topProto: UvmProto? = null
         val proto = UvmProto(TranslatorUtils.makeProtoNameOfTypeConstructor(topType)) //合约内main方法所属的class作为整个合约的mainproto
-        buildResultProtos.add(proto)
         proto.internUpvalue("ENV")
         topProto = proto
 
-        if(topProto==null){
-            throw GjavacException("mainProto is null")
-        }
+        topProto.sizeP = 0;
+        topProto.numparams = 1;//this table
+
+
         var codeMainProto: UvmProto? = null  //合约内的main方法
         var tableSlot = 0;
         var tempslot = utilTypes.size + 1;
@@ -146,10 +148,10 @@ open class JavaToUvmTranslator {
             //utilProto.parent = mainProto
             // 将utilProto在mainProto里closure化，作为mainProto的一个locvar，之后contractProto里可通过upval方式访问到
             topProto.internConstantValue(utilProto.name)
-            var slotIndex = topProto.subProtos.size + 1
-            topProto.addInstructionLine("closure %" + tempslot + " " + utilProto.name, null)
-            topProto.addInstructionLine("call %" + tempslot + " " + ( 1) + " " + (2), null)
-            topProto.addInstructionLine("move %" + slotIndex + " %" + tempslot, null)
+            var slotIndex = topProto.numparams + topProto.subProtos.size
+            topProto.addInstructionLine("closure %" + slotIndex + " " + utilProto.name, null)
+            topProto.addInstructionLine("call %" + slotIndex + " " + ( 1) + " " + (2), null)
+            //topProto.addInstructionLine("move %" + slotIndex + " %" + tempslot, null)
             val subProtoName = utilProto.name
             if (subProtoName == null) {
                 throw GjavacException("null method proto name")
@@ -167,7 +169,7 @@ open class JavaToUvmTranslator {
             }
             // 把各成员函数加入slots
             topProto.internConstantValue(methodProto.name)
-            var slotIndex = topProto.subProtos.size + 1
+            var slotIndex = topProto.numparams +  topProto.subProtos.size
             topProto.addInstructionLine("closure %" + slotIndex + " " + methodProto.name, null)
             topProto.internConstantValue(m.name)
             topProto.addInstructionLine("loadk %" + tmp1Slot + " const \"" + m.name + "\"", null)
@@ -185,14 +187,12 @@ open class JavaToUvmTranslator {
             topProto.subProtos.add(methodProto)
         }
 
-        topProto.maxStackSize = tmp1Slot + 1
-
         topProto.maxStackSize = tmp1Slot + 4;
-        var mainFuncSlot = topProto.subProtos.size + 2; // proto.SubProtos.IndexOf(mainProto) + 1;
+        var mainFuncSlot = topProto.numparams + topProto.subProtos.size + 1; // proto.SubProtos.IndexOf(mainProto) + 1;
         topProto.addInstructionLine("loadk %" + (mainFuncSlot+1) + " const \"main\"", null)
         topProto.addInstructionLine("gettable %" + mainFuncSlot + " %0 %" + (mainFuncSlot+1), null)
         topProto.addInstructionLine("move %" + (mainFuncSlot + 1) + " %0", null)
-        var returnCount = if (topProto.method?.signature?.returnType?.fullName() != "void") 1 else 0
+        var returnCount = 1;
         var argsCount = 1;
         topProto.addInstructionLine("call %" + mainFuncSlot + " " + (argsCount + 1) + " " + (returnCount + 1), null)
         if (returnCount > 0) {
@@ -206,6 +206,10 @@ open class JavaToUvmTranslator {
             contractProto = translateJvmType(contractType, jvmContentBuilder, luaAsmBuilder, codeMainProto)
             codeMainProto?.subProtos?.add(contractProto) //合约class的proto从属于main函数的proto
         }
+
+        topProto.sizeLocVars = topProto.locvars.size
+        topProto.sizek = topProto.constantValues.size
+        topProto.sizeCode = topProto.codeInstructions.size
         return topProto;
 
     }
@@ -219,6 +223,9 @@ open class JavaToUvmTranslator {
         var tableSlot = 0;
         proto.addInstructionLine("newtable %" + tableSlot + " 0 0", null)
 
+        proto.sizeP = 0;
+        proto.numparams = 1; //this
+
         var tmp1Slot = typeDefinition.methods.size + 1;
         for (m in typeDefinition.methods) {
             var methodProto = translateJvmMethod(m, jvmContentBuilder, luaAsmBuilder, proto)
@@ -227,7 +234,7 @@ open class JavaToUvmTranslator {
             }
             // 把各成员函数加入slots
             proto.internConstantValue(methodProto.name)
-            var slotIndex = proto.subProtos.size + 1
+            var slotIndex = proto.numparams + proto.subProtos.size
             proto.addInstructionLine("closure %" + slotIndex + " " + methodProto.name, null)
             proto.internConstantValue(m.name)
             proto.addInstructionLine("loadk %" + tmp1Slot + " const \"" + m.name + "\"", null)
@@ -243,9 +250,12 @@ open class JavaToUvmTranslator {
 
         proto.maxStackSize = tmp1Slot + 1
 
-            proto.addInstructionLine("return %" + tableSlot + " 2", null) // 构造函数的返回值
-            proto.addInstructionLine("return %0 1", null)
+        proto.addInstructionLine("return %" + tableSlot + " 2", null) // 构造函数的返回值
+        proto.addInstructionLine("return %0 1", null)
 
+        proto.sizeLocVars = proto.locvars.size
+        proto.sizek = proto.constantValues.size
+        proto.sizeCode = proto.codeInstructions.size
         return proto
     }
 
@@ -1380,15 +1390,6 @@ open class JavaToUvmTranslator {
                         needPopFirstArg = false
                     }
                 }
-                else if (!calledTypeName.equals(proto.method?.signature?.classDef?.name?.replace('/', '.')) && targetFuncName.length < 1) {
-                    // 调用工具类的方法 Class.forName(
-                    if(TranslatorUtils.isComponentClass(Class.forName(calledTypeName))){
-                        isUserDefineFunc = true
-                        targetFuncName = methodName
-                        isUserDefinedInTableFunc = true  //调用工具类
-                        needPopFirstArg = false
-                    }
-                }
 
 
                 var preaddParamsCount = 0 // 前置额外增加的参数，比如this
@@ -1881,6 +1882,7 @@ open class JavaToUvmTranslator {
         val endBlockInst = UvmInstruction("return %0 1")
 
         jvmContentBuilder.append("\r\n")
+        proto.sizeCode = proto.codeInstructions.size
         return proto;
     }
 

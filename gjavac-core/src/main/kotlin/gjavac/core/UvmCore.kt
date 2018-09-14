@@ -204,6 +204,12 @@ class UvmProto {
         }
         builder.append(".end_upvalue\r\n")
 
+        builder.append(".begin_local\r\n")
+        for (local in locvars) {
+            builder.append("\t" + "\"" +local.name + "\"" + " 1 " + sizeCode + "\r\n" )
+        }
+        builder.append(".end_local\r\n")
+
         builder.append(".begin_code\r\n")
         for (inst in codeInstructions) {
             if (inst.hasLocationLabel()) {
@@ -299,6 +305,8 @@ class UvmProto {
                 if (parentUpvalueIndex != null) {
                     upvalue.idx = parentUpvalueIndex
                     upvalue.instack = false
+                }else{
+                    throw GjavacException("internUpvalue wrong")
                 }
             } else {
                 upvalue.idx = upvalues.size
