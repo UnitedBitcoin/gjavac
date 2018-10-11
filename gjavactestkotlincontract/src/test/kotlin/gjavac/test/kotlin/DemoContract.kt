@@ -102,7 +102,7 @@ class Person {
         while(i<10) {
             sum += i
             i++
-            println(i)
+            UvmCoreLibs.print(i)
         }
         UvmCoreLibs.print("sum=$sum")
         var j = 100
@@ -111,19 +111,19 @@ class Person {
             sum2 += j
             j--
         }while(j>=0)
-        println("sum2=$sum2")
+        UvmCoreLibs.print("sum2=$sum2")
     }
 
 //     fun testWhen() {
-//         println("testWhen cases")
+//         UvmCoreLibs.print("testWhen cases")
 //         var i = 0
 //         while(i<4) {
-//             println(i)
+//             UvmCoreLibs.print(i)
 //             when(i) {
-//                 0 -> println("$i=0")
-//                 1->println("$i=1")
-//                 2->println("$i=2")
-//                 else -> println("$i>2")
+//                 0 -> UvmCoreLibs.print("$i=0")
+//                 1->UvmCoreLibs.print("$i=1")
+//                 2->UvmCoreLibs.print("$i=2")
+//                 else -> UvmCoreLibs.print("$i>2")
 //             }
 //             i++
 //         }
@@ -145,13 +145,13 @@ class Person {
         val f = b*c
         val h = c/b
         UvmCoreLibs.print(c)
-        println("$a + $b = $d")
-        println("$a + $c = $e")
-        println("$b * $c = $f")
-        println("$c / $b = $h")
+        UvmCoreLibs.print("$a + $b = $d")
+        UvmCoreLibs.print("$a + $c = $e")
+        UvmCoreLibs.print("$b * $c = $f")
+        UvmCoreLibs.print("$c / $b = $h")
 
-        println("1 = ${UvmCoreLibs.tointeger(c)}")
-        println("~ ${a} = ${UvmCoreLibs.neg(a as Long)}")
+        UvmCoreLibs.print("1 = ${UvmCoreLibs.tointeger(c)}")
+        UvmCoreLibs.print("~ ${a} = ${UvmCoreLibs.neg(a as Long)}")
     }
 
     fun testBooleans() {
@@ -159,7 +159,7 @@ class Person {
         var b = false
         var c = a && b
         UvmCoreLibs.print("a && b=$c")
-        println("a || b=${a||b}")
+        UvmCoreLibs.print("a || b=${a||b}")
         if(a) {
             UvmCoreLibs.print("$a=true")
         }

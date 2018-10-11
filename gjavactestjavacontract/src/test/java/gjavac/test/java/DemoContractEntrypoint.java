@@ -10,7 +10,7 @@ public class DemoContractEntrypoint {
         DemoContract contract = new DemoContract();
         contract.setStorage(new Storage());
         print(contract);
-        contract.init();
+//        contract.init();
         return contract;
     }
 }
