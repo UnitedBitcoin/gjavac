@@ -52,31 +52,35 @@ public class UvmCoreLibs {
         return (int)(a/b);
     }
 
-    public static Long tointeger(Object value) {
+    public static long tointeger(Object value) {
         if(value == null) {
-            return null;
+            error("invalid object null");
+            return -1;
         }
         try {
             return Long.valueOf(value.toString());
         } catch (Exception e) {
-            return null;
+            error("invalid object:"+value.toString());
+            return -1;
         }
     }
 
-    public static Double tonumber(Object value) {
+    public static double tonumber(Object value) {
         if(value == null) {
-            return null;
+            error("invalid object null");
+            return 0.0;
         }
         try {
             return Double.valueOf(value.toString());
         } catch (Exception e) {
-            return null;
+            error("invalid object:"+value.toString());
+            return 0.0;
         }
     }
 
-    public static Boolean toboolean(Object value) {
+    public static boolean toboolean(Object value) {
         if(value == null) {
-            return null;
+            return false;
         }
         return "true".equals(value.toString()) || "1".equals(value.toString());
     }
@@ -91,6 +95,20 @@ public class UvmCoreLibs {
             return null;
         }
     }
+
+    public static Object fast_map_get(String storagename,String key)
+    {
+        return new Object();
+    }
+
+
+    public static void fast_map_set(String storagename, String key, Object value)
+    {
+
+    }
+
+
+
 
     public static long neg(long n) {
         return ~n;
@@ -356,6 +374,16 @@ public class UvmCoreLibs {
 
     public static void emit(String eventName, String eventArg) {
         System.out.println("emited event " + eventName + " with event argument " + eventArg);
+    }
+
+    public static Object call_contract_api(String contract_address, String api_name, Object arg)
+    {
+        return new Object();
+    }
+
+    public static Object static_call_contract_api(String contract_address, String api_name, Object arg)
+    {
+        return new Object();
     }
 
 }

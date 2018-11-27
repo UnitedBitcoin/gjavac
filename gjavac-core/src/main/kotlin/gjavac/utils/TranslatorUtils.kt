@@ -10,6 +10,7 @@ import gjavac.lib.*
 import org.apache.commons.lang3.StringEscapeUtils
 import kotlin.reflect.jvm.jvmName
 
+
 class TranslatorUtils {
     companion object {
         fun isMainClass(typeDefinition: ClassDefinition): Boolean {
@@ -102,6 +103,7 @@ class TranslatorUtils {
                     continue
                 }
                 val methodName = methodDefinition.name ?: continue
+                //if(methodName == "init")continue
                 // 要求公开且非构造函数的方法必须都是API
                 contractApiNames.add(methodName)
                 if(methodDefinition.annotations.firstOrNull {t -> Offline::class.java.isAssignableFrom(t.typeClass())}!=null) {
@@ -173,10 +175,10 @@ class TranslatorUtils {
                 return StorageValueTypes.storage_value_int
             }
             if (typeFullName == "float" || typeFullName == "java.lang.Float" || typeFullName == "double" || typeFullName == "java.lang.Double") {
-                return StorageValueTypes.storage_value_number
+                return StorageValueTypes.storage_value_number;
             }
             if (typeFullName == "boolean" || typeFullName == "java.lang.Boolean") {
-                return StorageValueTypes.storage_value_bool
+                return StorageValueTypes.storage_value_bool;
             }
             if(typeFullName == UvmArray::class.java.canonicalName) {
                 return StorageValueTypes.storage_value_unknown_array // TODO: more specific type
@@ -184,16 +186,15 @@ class TranslatorUtils {
             if(typeFullName==UvmMap::class.java.canonicalName) {
                 return StorageValueTypes.storage_value_unknown_table // TODO: more specific type
             }
-            throw GjavacException("not supported storage value type $typeFullName now")
+            throw GjavacException("not supported storage value type $typeFullName now");
         }
 
-        fun getStorageValueTypeFromType(typeRef: ClassDefinition): StorageValueTypes {
-            val typeFullName = typeRef.name
-            return getStorageValueTypeFromTypeName(typeFullName)
-        }
+//        fun getStorageValueTypeFromType(typeRef: ClassDefinition): StorageValueTypes {
+//            return getStorageValueTypeFromTypeName(typeFullName)
+//        }
 
         fun getUvmTypeInfoFromType(typeRef: TypeInfo): UvmTypeInfoEnum {
-            val typeFullName = typeRef.fullName()
+            var typeFullName = typeRef.fullName();
             if (typeFullName == String::class.jvmName) {
                 return UvmTypeInfoEnum.LTI_STRING;
             }
@@ -206,7 +207,7 @@ class TranslatorUtils {
             if (typeFullName == "boolean" || typeFullName == "java.lang.Boolean") {
                 return UvmTypeInfoEnum.LTI_BOOL;
             }
-            throw GjavacException("not supported storage value type $typeRef now")
+            throw GjavacException("not supported storage value type $typeRef now");
         }
 
         fun escape(input: String): String {

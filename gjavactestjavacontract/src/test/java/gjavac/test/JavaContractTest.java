@@ -14,6 +14,6 @@ public class JavaContractTest {
         String class3 = testClassesDir + "/gjavac/test/java/DemoContractEntrypoint";
         String class4 = testClassesDir + "/gjavac/test/java/Storage";
         String[] classesToCompile = new String[] {class1, class2, class3, class4};
-        MainKt.main(classesToCompile);
+        //MainKt.main(classesToCompile);
     }
 }

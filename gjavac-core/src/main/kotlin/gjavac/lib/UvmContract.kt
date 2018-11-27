@@ -3,7 +3,7 @@ package gjavac.lib
 abstract class UvmContract<T> {
     var storage: T? = null
     abstract fun init()
-    open fun on_deposit(num: Int) {
+    open fun on_deposit(num: Long){
 
     }
 
@@ -15,7 +15,7 @@ abstract class UvmContract<T> {
 
     }
 
-    open fun on_destroy() {
+    open fun on_destory(){
 
     }
 }

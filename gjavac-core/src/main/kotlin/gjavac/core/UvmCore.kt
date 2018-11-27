@@ -81,7 +81,7 @@ enum class StorageValueTypes(val value: Int) {
 }
 
 
-data class UvmLocVar(val name: String, val slotIndex: Int) {
+data class UvmLocVar(val name: String, val slotIndex: Int,var startPc:Int=0,var endPc:Int=0) {
 }
 
 /**
@@ -200,9 +200,15 @@ class UvmProto {
 
         builder.append(".begin_upvalue\r\n")
         for (upvalue in upvalues) {
-            builder.append("\t" + (if (upvalue.instack) 1 else 0) + " " + upvalue.idx + "\r\n")
+            builder.append("\t" + (if (upvalue.instack) 1 else 0) + " " + upvalue.idx + " \"" +upvalue.name +"\"" +"\r\n")
         }
         builder.append(".end_upvalue\r\n")
+
+        builder.append(".begin_local\r\n")
+        for (local in locvars) {
+            builder.append("\t" + "\"" +local.name + "\" " + local.startPc + " " + sizeCode + "\r\n" )
+        }
+        builder.append(".end_local\r\n")
 
         builder.append(".begin_code\r\n")
         for (inst in codeInstructions) {
@@ -299,6 +305,8 @@ class UvmProto {
                 if (parentUpvalueIndex != null) {
                     upvalue.idx = parentUpvalueIndex
                     upvalue.instack = false
+                }else{
+                    throw GjavacException("internUpvalue wrong")
                 }
             } else {
                 upvalue.idx = upvalues.size

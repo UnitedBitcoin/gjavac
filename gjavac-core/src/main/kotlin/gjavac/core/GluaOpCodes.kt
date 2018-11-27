@@ -67,7 +67,20 @@ enum class UvmOpCodeEnums(val opCode: Int)
 
   OP_VARARG(45), /*	A B	R(A), R(A+1), ..., R(A+B-2) = vararg		*/
 
-  OP_EXTRAARG(46) /*	Ax	extra (larger) argument for previous opcode	*/
+  OP_EXTRAARG(46), /*	Ax	extra (larger) argument for previous opcode	*/
+
+  OP_PUSH(47), /*	add 		*/
+  OP_POP(48), /*	add 	*/
+  OP_GETTOP(49), /*	add 		*/
+
+  OP_CMP(50),  /* A B C   if((R(B)>R(C))then{R(A):=1;}else if((R(B)==R(C))then{R(A):=0;}else if((R(B)<R(C))then{R(A):=-1;}*/
+  OP_CMP_EQ(51),  /* A B C   */
+  OP_CMP_NE(52),  /* A B C   */
+  OP_CMP_GT(53),  /* A B C   */
+  OP_CMP_LT(54),  /* A B C   */
+
+  OP_CCALL(55),  /* A B C   */
+  OP_CSTATICCALL(56)  /* A B C   */
 }
 
 /*===========================================================================
@@ -136,7 +149,17 @@ val OpcodeNames = listOf(
   "SETLIST",
   "CLOSURE",
   "VARARG",
-  "EXTRAARG"
+  "EXTRAARG",
+        "PUSH",
+        "POP",
+        "GETTOP",
+        "CMP",
+        "CMP_EQ",
+        "CMP_NE",
+        "CMP_GT",
+        "CMP_LT",
+        "CCALL",
+        "CSTATICCALL"
 )
 
 class UvmOpCode(val OpCodeValue: UvmOpCodeEnums)
