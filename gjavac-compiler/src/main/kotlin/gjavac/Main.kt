@@ -4,6 +4,7 @@ import gjavac.cecil.ClassDefinitionReader
 import gjavac.translater.JavaToUvmTranslator
 import gjavac.utils.use
 import java.io.*
+import java.nio.file.Paths
 
 fun main(args: Array<String>) {
     val classDefReader = ClassDefinitionReader()
@@ -38,7 +39,7 @@ fun main(args: Array<String>) {
     translator.translateModule(moduleDef, jvmContentBuilder, uvmAssBuilder)
     var outFilename = "result.ass"
     if(outputPath.length>0){
-        outFilename = outputPath + "/" + outFilename
+        outFilename = Paths.get(outputPath, outFilename).toString()
     }
     use(FileOutputStream(File(outFilename)), { fos ->
         val bw = BufferedWriter(PrintWriter(fos))
@@ -46,7 +47,10 @@ fun main(args: Array<String>) {
         bw.flush()
     })
     val metaInfoJson = translator.getMetaInfoJson()
-    val metaOutputfilename = "result.meta.json"
+    var metaOutputfilename = "result.meta.json"
+    if(outputPath.length>0) {
+        metaOutputfilename = Paths.get(outputPath, metaOutputfilename).toString()
+    }
     use(FileOutputStream(File(metaOutputfilename)), { fos ->
         val bw = BufferedWriter(PrintWriter(fos))
         bw.write(metaInfoJson)

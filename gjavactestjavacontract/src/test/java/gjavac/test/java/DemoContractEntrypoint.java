@@ -8,9 +8,10 @@ public class DemoContractEntrypoint {
     public UvmContract main() {
         print("hello java");
         DemoContract contract = new DemoContract();
-        //contract.setStorage(new Storage());
-        //print(contract);
-        //contract.init();
+        contract.setStorage(new Storage());
+        print(contract);
+//        contract.init();
+
         return contract;
     }
 }

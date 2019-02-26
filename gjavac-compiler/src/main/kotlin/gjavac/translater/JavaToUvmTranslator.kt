@@ -60,7 +60,7 @@ open class JavaToUvmTranslator {
 
         val mainTypes = module.classes.filter { TranslatorUtils.isMainClass(it) }
         if (mainTypes.size != 1) {
-            throw GjavacException("必需提供1个且只有1个main方法(非static)的类型")
+            throw GjavacException("must provide only one class with only one non-static main method")
         }
         val eventEmitterTypes = module.classes.filter { TranslatorUtils.isEventEmitterType(it) }
         for (emitterType in eventEmitterTypes) {
@@ -1119,6 +1119,7 @@ open class JavaToUvmTranslator {
                         || calledTypeName == java.lang.Long::class.java.canonicalName
                         || calledTypeName == java.lang.Float::class.java.canonicalName
                         || calledTypeName == java.lang.Double::class.java.canonicalName
+                        || calledTypeName == java.lang.Number::class.java.canonicalName
                         || calledTypeName == java.lang.String::class.java.canonicalName)
                         && (methodName == "valueOf" || methodName == "longValue" || methodName=="toLong"
                         || methodName == "intValue" || methodName == "toInt"
@@ -1434,10 +1435,7 @@ open class JavaToUvmTranslator {
                 }
                 // TODO: 更多内置库的函数支持
                 if (targetFuncName.isEmpty()) {
-                    if (methodInfo.fullName().equals("(boolean)java.lang.Boolean")){
-                        return result
-                    }
-                    throw GjavacException("暂时不支持使用方法" + methodInfo.fullName())
+                    throw GjavacException("not support method $methodName ${methodInfo.fullName()} now")
                 }
                 if (paramsCount > proto.tmpMaxStackTopSlotIndex - proto.tmp1StackTopSlotIndex - 1) {
                     throw GjavacException("暂时不支持超过" + (proto.tmpMaxStackTopSlotIndex - proto.tmp1StackTopSlotIndex - 1) + "个参数的C#方法调用")
