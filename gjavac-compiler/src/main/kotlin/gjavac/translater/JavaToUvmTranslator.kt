@@ -701,6 +701,12 @@ open class JavaToUvmTranslator {
                 val slotIndex = variableIndex
                 // 获取eval stack的栈顶值
                 popFromEvalStackToSlot(proto,slotIndex,i,result,commentPrefix)
+
+                //add start pc
+                proto.locvars[slotIndex].startPc = proto.notEmptyCodeInstructions().size + result.size
+                if(proto.locvars[slotIndex].slotIndex!=slotIndex){
+                    throw GjavacException("loc slotidx wrong")
+                }
             }
             Opcodes.ANEWARRAY -> {
                 // create new array of reference
@@ -1428,6 +1434,9 @@ open class JavaToUvmTranslator {
                 }
                 // TODO: 更多内置库的函数支持
                 if (targetFuncName.isEmpty()) {
+                    if (methodInfo.fullName().equals("(boolean)java.lang.Boolean")){
+                        return result
+                    }
                     throw GjavacException("暂时不支持使用方法" + methodInfo.fullName())
                 }
                 if (paramsCount > proto.tmpMaxStackTopSlotIndex - proto.tmp1StackTopSlotIndex - 1) {
@@ -1831,6 +1840,29 @@ open class JavaToUvmTranslator {
             needTranslateResult2Boolean = true;
         }
 
+        var tempi = 0
+        var params = proto.sizeP
+        if (!method.isStatic) {
+            proto.locvars.add(UvmLocVar("this", tempi))
+            tempi++
+            params--
+
+        }
+        if(params>0){
+            for(idx in 0..(params-1)){
+                proto.locvars.add(UvmLocVar("Vparam_"+idx, tempi))
+                tempi++
+            }
+        }
+        var locsnum = method.maxLocals - proto.sizeP
+        if(locsnum>0){
+            for(idx in 0..(locsnum-1)){
+                proto.locvars.add(UvmLocVar("Vloc_"+idx, tempi))
+                tempi++
+            }
+        }
+
+
         // 不需要支持类型的虚函数调用，只支持静态函数
         for (i in method.code) {
             jvmContentBuilder.append("" + i.instLine + "\r\n")
@@ -2178,6 +2210,16 @@ open class JavaToUvmTranslator {
             for (loc in locationMap)
             {
                 proto.neededLocationsMap.put(loc.key, loc.value)
+            }
+        }
+
+        //调整localval startpc
+        for (locval in proto.locvars)
+        {
+            if (locval.startPc > 0)
+            {
+                var newPc = locval.startPc - getLtCount(delIndexes, locval.startPc);
+                locval.startPc = newPc;
             }
         }
         //print("reduce codeslines =" + delIndexes.count() + "\n")

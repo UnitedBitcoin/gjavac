@@ -81,7 +81,7 @@ enum class StorageValueTypes(val value: Int) {
 }
 
 
-data class UvmLocVar(val name: String, val slotIndex: Int) {
+data class UvmLocVar(val name: String, val slotIndex: Int,var startPc:Int=0,var endPc:Int=0) {
 }
 
 /**
@@ -206,7 +206,7 @@ class UvmProto {
 
         builder.append(".begin_local\r\n")
         for (local in locvars) {
-            builder.append("\t" + "\"" +local.name + "\"" + " 1 " + sizeCode + "\r\n" )
+            builder.append("\t" + "\"" +local.name + "\" " + local.startPc + " " + sizeCode + "\r\n" )
         }
         builder.append(".end_local\r\n")
 
