@@ -268,7 +268,7 @@ open class JavaToUvmTranslator {
     }
 
     fun makeJmpToInstruction(proto: UvmProto, i: Instruction, opName: String,
-                             toJmpToInst: Instruction, result: MutableList<UvmInstruction>, commentPrefix: String, onlyNeedResultCount: Boolean,needTranslateResult2Boolean: Boolean) {
+                             toJmpToInst: Instruction, result: MutableList<UvmInstruction>, commentPrefix: String, onlyNeedResultCount: Boolean) {
         // 满足条件，跳转到目标指令
         // 在要跳转的目标指令的前面增加 label:
         var jmpLabel = proto.name + "_to_dest_" + opName + "_" + i.offset;
@@ -300,7 +300,7 @@ open class JavaToUvmTranslator {
                 var oldNotAffectMode = proto.inNotAffectMode;
                 proto.inNotAffectMode = true;
                 var uvmInsts = translateJvmInstruction(proto, proto.method!!.code[j],
-                        "", true,needTranslateResult2Boolean) // 因为可能有嵌套情况，这里只需要获取准确的指令数量不需要准确的指令内容
+                        "", true) // 因为可能有嵌套情况，这里只需要获取准确的指令数量不需要准确的指令内容
                 proto.inNotAffectMode = oldNotAffectMode;
                 var notEmptyUvmInstsCount = (uvmInsts.filter
                 {
@@ -490,8 +490,9 @@ open class JavaToUvmTranslator {
         popFromEvalStackToSlot(proto,valueSlot,i,result,commentPrefix)
         // 对于布尔类型，因为.net中布尔类型参数加载的时候用的ldc.i，加载的是整数，所以这里要进行类型转换成bool类型，使用 not not a来转换
         if (needConvtToBool) {
-            result.add(proto.makeInstructionLine("not %" + valueSlot + " %" + valueSlot + commentPrefix, i))
-            result.add(proto.makeInstructionLine("not %" + valueSlot + " %" + valueSlot + commentPrefix, i))
+            convertInt2LuaBoolean(proto,valueSlot,i,commentPrefix,result)
+            //result.add(proto.makeInstructionLine("not %" + valueSlot + " %" + valueSlot + commentPrefix, i))
+            //result.add(proto.makeInstructionLine("not %" + valueSlot + " %" + valueSlot + commentPrefix, i))
         }
 
         // 加载table
@@ -510,7 +511,7 @@ open class JavaToUvmTranslator {
      * 读取eval stack top(table)值，执行table读属性操作,读取结果放入eval stack
      */
     fun makeGetTablePropInstructions(proto: UvmProto, propName: String, i: Instruction, result: MutableList<UvmInstruction>,
-                                     commentPrefix: String, needConvtToBool: Boolean) {
+                                     commentPrefix: String, needConvtToJavaboolean: Boolean) {
         proto.internConstantValue(propName)
         var tableSlot = proto.tmp2StackTopSlotIndex + 1
         var valueSlot = proto.tmp2StackTopSlotIndex + 2
@@ -524,10 +525,9 @@ open class JavaToUvmTranslator {
         result.add(proto.makeInstructionLine(
                 "gettable %" + valueSlot + " %" + tableSlot + " %" + proto.tmp2StackTopSlotIndex + commentPrefix, i))
 
-        // 对于布尔类型，因为.net中布尔类型参数加载的时候用的ldc.i，加载的是整数，所以这里要进行类型转换成bool类型，使用 not not a来转换
-        if (needConvtToBool) {
-            result.add(proto.makeInstructionLine("not %" + valueSlot + " %" + valueSlot + commentPrefix, i))
-            result.add(proto.makeInstructionLine("not %" + valueSlot + " %" + valueSlot + commentPrefix, i))
+        //
+        if (needConvtToJavaboolean) {
+            convertLuaBool2Javaboolean(proto,valueSlot,i,commentPrefix,result)
         }
         proto.internConstantValue(1)
         // value放回eval stack
@@ -625,7 +625,67 @@ open class JavaToUvmTranslator {
         pushIntoEvalStackTopSlot(proto,proto.tmp2StackTopSlotIndex,i,result,commentPrefix)
     }
 
-    fun translateJvmInstruction(proto: UvmProto, i: Instruction, commentPrefix: String, onlyNeedResultCount: Boolean , needTranslateResult2Boolean:Boolean): MutableList<UvmInstruction> {
+    //convert false,true to 0,1 (java bool is int 0,1)
+    fun convertLuaBool2Javaboolean(proto: UvmProto, slotresult:Int, i: Instruction,commentPrefix: String,result:MutableList<UvmInstruction>){
+        proto.internConstantValue(0)
+        proto.internConstantValue(false)
+
+        val slotint = proto.tmpMaxStackTopSlotIndex - 1
+        val slotTemp = proto.tmpMaxStackTopSlotIndex
+        //java合约API如果返回boolean类型数据  需要手动用Not not转换
+
+        result.add(proto.makeInstructionLine("loadk %" + slotint + " const 0" + commentPrefix, i))
+        result.add(proto.makeInstructionLine("loadk %" + slotTemp + " const false" + commentPrefix, i))
+        // if slotresult==false then pc++
+        result.add(proto.makeInstructionLine("eq 0 %" + slotresult + " %" + slotTemp + commentPrefix, i))
+
+        var labelWhenTrue = proto.name + "_1_" + i.offset;
+        var labelWhenFalse = proto.name + "_0_" + i.offset;
+        labelWhenTrue = proto.internNeedLocationLabel(
+                2 + proto.notEmptyCodeInstructions().size + notEmptyUvmInstructionsCountInList(result), labelWhenTrue)
+
+        result.add(proto.makeInstructionLine("jmp 1 $" + labelWhenTrue + commentPrefix, i))
+        labelWhenFalse =
+                proto.internNeedLocationLabel(
+                        2 + proto.notEmptyCodeInstructions().size + notEmptyUvmInstructionsCountInList(result), labelWhenFalse)
+        result.add(proto.makeInstructionLine("jmp 1 $" + labelWhenFalse + commentPrefix, i))
+
+        result.add(proto.makeInstructionLine("loadk %" + slotint + " const 1" + commentPrefix, i))
+        result.add(proto.makeInstructionLine("move %" + slotresult + " %" + slotint + commentPrefix, i))
+    }
+
+    //convert 0,1 to false,true (java bool is int 0,1)
+    fun convertInt2LuaBoolean(proto: UvmProto, slotresult:Int, i: Instruction,commentPrefix: String,result:MutableList<UvmInstruction>){
+        proto.internConstantValue(0)
+        proto.internConstantValue(false)
+        proto.internConstantValue(1)
+        proto.internConstantValue(true)
+
+        val slotLuaBool = proto.tmpMaxStackTopSlotIndex - 1
+        val slotTemp = proto.tmpMaxStackTopSlotIndex
+        //java合约API如果返回boolean类型数据  需要手动用Not not转换
+
+        result.add(proto.makeInstructionLine("loadk %" + slotLuaBool + " const false" + commentPrefix, i))
+        result.add(proto.makeInstructionLine("loadk %" + slotTemp + " const 0" + commentPrefix, i))
+        // if slotresult==false then pc++
+        result.add(proto.makeInstructionLine("eq 0 %" + slotresult + " %" + slotTemp + commentPrefix, i))
+
+        var labelWhenTrue = proto.name + "_true_" + i.offset;
+        var labelWhenFalse = proto.name + "_false_" + i.offset;
+        labelWhenTrue = proto.internNeedLocationLabel(
+                2 + proto.notEmptyCodeInstructions().size + notEmptyUvmInstructionsCountInList(result), labelWhenTrue)
+
+        result.add(proto.makeInstructionLine("jmp 1 $" + labelWhenTrue + commentPrefix, i))
+        labelWhenFalse =
+                proto.internNeedLocationLabel(
+                        2 + proto.notEmptyCodeInstructions().size + notEmptyUvmInstructionsCountInList(result), labelWhenFalse)
+        result.add(proto.makeInstructionLine("jmp 1 $" + labelWhenFalse + commentPrefix, i))
+
+        result.add(proto.makeInstructionLine("loadk %" + slotLuaBool + " const true" + commentPrefix, i))
+        result.add(proto.makeInstructionLine("move %" + slotresult + " %" + slotLuaBool + commentPrefix, i))
+    }
+
+    fun translateJvmInstruction(proto: UvmProto, i: Instruction, commentPrefix: String, onlyNeedResultCount: Boolean ): MutableList<UvmInstruction> {
         // TODO
         val result: MutableList<UvmInstruction> = mutableListOf()
         when (i.opCode) {
@@ -720,10 +780,7 @@ open class JavaToUvmTranslator {
                 if (hasReturn) {
 
                     popFromEvalStackToSlot(proto,proto.tmp1StackTopSlotIndex,i,result,commentPrefix)
-                    if(needTranslateResult2Boolean){
-                        result.add(proto.makeInstructionLine("not %" + proto.tmp1StackTopSlotIndex + " %" + proto.tmp1StackTopSlotIndex + commentPrefix +";convertResult2RealBool", i))
-                        result.add(proto.makeInstructionLine("not %" + proto.tmp1StackTopSlotIndex + " %" + proto.tmp1StackTopSlotIndex + commentPrefix +";convertResult2RealBool", i))
-                    }
+
                     result.add(proto.makeInstructionLine("return %" + proto.tmp1StackTopSlotIndex + " " + (returnCount + 1) + commentPrefix, i))
                 }
                 result.add(proto.makeInstructionLine("return %0 1" + commentPrefix + " ret", i))
@@ -1032,10 +1089,13 @@ open class JavaToUvmTranslator {
                 val methodInfo = JavaTypeDesc.parse(operand.desc)
                 val methodParams = methodInfo.methodArgs
                 var resultBool2IntValue = false;
+                //externalMethod指的是非本合约的方法， 即corelib func, other contract function
+                //java里面的boolean其实就是int的0、1,当调用externalMethod时 bool参数需要将int转为lua的bool，返回结果需要把lua的bool转为int的0,1
+                var isExternalMethod = true;
                 var paramsCount = methodParams.size
                 var hasThis = i.opCode != Opcodes.INVOKESTATIC
                 val hasReturn = methodInfo.methodReturnType != null && !methodInfo.methodReturnType?.desc.equals("V")
-                if(hasReturn && methodInfo.methodReturnType?.desc.equals("Z")){
+                if(hasReturn && methodInfo.methodReturnType?.desc.equals("Z")){ // Z表示boolean   如果返回Boolean则不是Z
                     resultBool2IntValue = true;
                 }
                 var needPopFirstArg = false // 一些函数，比如import module的函数，因为用object成员函数模拟，而在uvm中是table中属性的函数，所以.net中多传了个this对象
@@ -1170,6 +1230,7 @@ open class JavaToUvmTranslator {
                     // TODO: 其他字符串特殊函数
                 } else if (calledTypeName.equals(proto.method?.signature?.classDef?.name?.replace('/', '.'))) {
                     // 调用本类型的方法
+                    isExternalMethod = false
                     isUserDefineFunc = true
                     targetFuncName = methodName
                     isUserDefinedInTableFunc = false
@@ -1377,6 +1438,7 @@ open class JavaToUvmTranslator {
                     hasThis = false
                 }
                 else if(TranslatorUtils.isComponentClass(Class.forName(calledTypeName))&& targetFuncName.length < 1){ //调用工具类
+                    isExternalMethod = false
                     var protoMethodClassName = proto.method?.signature?.classDef?.name?.replace('/', '.')
                     if(calledTypeName.equals(protoMethodClassName)){  //工具类function调用本工具类function,通过从自己table中获取
                         isUserDefineFunc = true
@@ -1431,8 +1493,31 @@ open class JavaToUvmTranslator {
                     isUserDefineFunc = true
                     targetFuncName = methodName
                     isUserDefinedInTableFunc = false
-
                 }
+
+                //java boolean 转为Boolean
+                if (targetFuncName.isEmpty() && methodName.equals("valueOf") && methodInfo.fullName().equals("(boolean)java.lang.Boolean") ) {
+                    var slotIndex = proto.tmp2StackTopSlotIndex
+                    popFromEvalStackToSlot(proto,slotIndex,i,result,commentPrefix)
+                    // 对于布尔类型，因为.net中布尔类型参数加载的时候用的ldc.i，加载的是整数，所以这里要进行类型转换成bool类型，使用 not not a来转换
+                    //result.add(proto.makeInstructionLine("not %" + slotIndex + " %" + slotIndex + commentPrefix, i))
+                    //result.add(proto.makeInstructionLine("not %" + slotIndex + " %" + slotIndex + commentPrefix, i))
+                    convertInt2LuaBoolean(proto,slotIndex,i,commentPrefix,result)
+
+                    pushIntoEvalStackTopSlot(proto,slotIndex,i,result,commentPrefix)
+                    return result
+                }
+
+                //java Boolean 转为 boolean
+                if (targetFuncName.isEmpty() && methodName.equals("booleanValue") && methodInfo.fullName().equals("()boolean") ) {
+                    var slotIndex = proto.tmp2StackTopSlotIndex
+                    popFromEvalStackToSlot(proto,slotIndex,i,result,commentPrefix)
+                    convertLuaBool2Javaboolean(proto,slotIndex,i,commentPrefix,result)
+                    pushIntoEvalStackTopSlot(proto,slotIndex,i,result,commentPrefix)
+                    return result
+                }
+
+
                 // TODO: 更多内置库的函数支持
                 if (targetFuncName.isEmpty()) {
                     throw GjavacException("not support method $methodName ${methodInfo.fullName()} now")
@@ -1458,7 +1543,7 @@ open class JavaToUvmTranslator {
                     var needConvtToBool = false
                     if (methodParamIndex < methodParams.size && methodParamIndex >= 0) {
                         var paramType = methodParams[methodParamIndex]
-                        if (paramType.fullName() == "System.Boolean") {
+                        if ((paramType.fullName() == "System.Boolean") && isExternalMethod ) {
                             needConvtToBool = true;
                         }
                     }
@@ -1466,8 +1551,9 @@ open class JavaToUvmTranslator {
                     popFromEvalStackToSlot(proto,slotIndex,i,result,commentPrefix)
                     // 对于布尔类型，因为.net中布尔类型参数加载的时候用的ldc.i，加载的是整数，所以这里要进行类型转换成bool类型，使用 not not a来转换
                     if (needConvtToBool) {
-                        result.add(proto.makeInstructionLine("not %" + slotIndex + " %" + slotIndex + commentPrefix, i))
-                        result.add(proto.makeInstructionLine("not %" + slotIndex + " %" + slotIndex + commentPrefix, i))
+                        convertInt2LuaBoolean(proto,slotIndex,i,commentPrefix,result)
+                        //result.add(proto.makeInstructionLine("not %" + slotIndex + " %" + slotIndex + commentPrefix, i))
+                        //result.add(proto.makeInstructionLine("not %" + slotIndex + " %" + slotIndex + commentPrefix, i))
                     }
 
                 }
@@ -1611,39 +1697,9 @@ open class JavaToUvmTranslator {
                 // 把调用结果存回eval-stack
                 if (hasReturn) {
                     // 调用结果在tmp3
-                    if(resultBool2IntValue){
-
-                        proto.internConstantValue(0)
-                        proto.internConstantValue(false)
-                        val slotresult = proto.tmp3StackTopSlotIndex
-
-                        val slotint = slotresult + 1
-                        val slotTemp = slotresult + 2
-                        //java合约API如果返回boolean类型数据  需要手动用Not not转换
-
-                        result.add(proto.makeInstructionLine("not %" + slotresult + " %" + slotresult + commentPrefix, i))
-                        result.add(proto.makeInstructionLine("not %" + slotresult + " %" + slotresult + commentPrefix, i))
-
-
-                        result.add(proto.makeInstructionLine("loadk %" + slotint + " const 0" + commentPrefix, i))
-                        result.add(proto.makeInstructionLine("loadk %" + slotTemp + " const false" + commentPrefix, i))
-                        // if slotresult==false then pc++
-                        result.add(proto.makeInstructionLine("eq 0 %" + slotresult + " %" + slotTemp + commentPrefix, i))
-
-                        var labelWhenTrue = proto.name + "_true_" + i.offset;
-                        var labelWhenFalse = proto.name + "_false_" + i.offset;
-                        labelWhenTrue = proto.internNeedLocationLabel(
-                                2 + proto.notEmptyCodeInstructions().size + notEmptyUvmInstructionsCountInList(result), labelWhenTrue)
-
-                        result.add(proto.makeInstructionLine("jmp 1 $" + labelWhenTrue + commentPrefix, i))
-                        labelWhenFalse =
-                                proto.internNeedLocationLabel(
-                                        2 + proto.notEmptyCodeInstructions().size + notEmptyUvmInstructionsCountInList(result), labelWhenFalse)
-                        result.add(proto.makeInstructionLine("jmp 1 $" + labelWhenFalse + commentPrefix, i))
-
-                        result.add(proto.makeInstructionLine("loadk %" + slotint + " const 1" + commentPrefix, i))
-                        result.add(proto.makeInstructionLine("move %" + slotresult + " %" + slotint + commentPrefix, i))
-                    }
+                    if(resultBool2IntValue&&isExternalMethod){
+                        convertLuaBool2Javaboolean(proto,proto.tmp3StackTopSlotIndex,i,commentPrefix,result)
+                        }
 
                     pushIntoEvalStackTopSlot(proto,proto.tmp3StackTopSlotIndex,i,result,commentPrefix )
                 }
@@ -1661,7 +1717,7 @@ open class JavaToUvmTranslator {
                 if (toJmpToInst == null) {
                     throw GjavacException("goto dest line not found " + i)
                 }
-                makeJmpToInstruction(proto, i, "goto", toJmpToInst, result, commentPrefix, onlyNeedResultCount,needTranslateResult2Boolean)
+                makeJmpToInstruction(proto, i, "goto", toJmpToInst, result, commentPrefix, onlyNeedResultCount)
             }
             Opcodes.TABLESWITCH -> {
                 // TODO
@@ -1752,7 +1808,7 @@ open class JavaToUvmTranslator {
                     else -> throw GjavacException("not supported compare type " + opType)
                 }
                 // 满足相反的条件，跳转到目标指令
-                makeJmpToInstruction(proto, i, i.opCodeName(), toJmpToInst, result, commentPrefix, onlyNeedResultCount,needTranslateResult2Boolean)
+                makeJmpToInstruction(proto, i, i.opCodeName(), toJmpToInst, result, commentPrefix, onlyNeedResultCount)
             }
             Opcodes.INSTANCEOF -> {
                 makeLoadConstInst(proto, i, result, proto.tmp1StackTopSlotIndex, true, commentPrefix)
@@ -1832,11 +1888,11 @@ open class JavaToUvmTranslator {
         proto.maxCallStackSize = 0;
 
         var lastLinenumber = 0;
-        var needTranslateResult2Boolean = false;
-        if(method.signature?.returnType?.signature == "Z") //return boolean
-        {
-            needTranslateResult2Boolean = true;
-        }
+        //var needTranslateResult2Boolean = false;
+        //if(method.signature?.returnType?.signature == "Z") //return boolean
+        //{
+        //    needTranslateResult2Boolean = true;
+        //}
 
         var tempi = 0
         var params = proto.sizeP
@@ -1881,7 +1937,7 @@ open class JavaToUvmTranslator {
             // commentPrefix += dotnetOpStr;
             // 关于java的evaluation stack在uvm字节码虚拟机中的实现方式
             // 维护一个evaluation stack的局部变量,，每个proto入口处清空它
-            var uvmInstructions = translateJvmInstruction(proto, i, commentPrefix, false,needTranslateResult2Boolean)
+            var uvmInstructions = translateJvmInstruction(proto, i, commentPrefix, false)
             for (uvmInst in uvmInstructions) {
                 proto.addInstruction(uvmInst)
             }

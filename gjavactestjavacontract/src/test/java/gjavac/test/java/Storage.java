@@ -7,7 +7,7 @@ public class Storage {
     public String supply ; //big int str
     public Long precision ;
     public String state ;
-    public String allowLock ;
+    public boolean allowLock ;
     public UvmMap<String> users ;
     public UvmMap<String> allowed ; // authorizer => {userAddress=>amount int}
     public UvmMap<String> lockedAmounts ; // userAddress => "lockedAmount,unlockBlockNumber"
@@ -54,11 +54,11 @@ public class Storage {
         this.state = state;
     }
 
-    public String getAllowLock() {
+    public boolean getAllowLock() {
         return allowLock;
     }
 
-    public void setAllowLock(String allowLock) {
+    public void setAllowLock(boolean allowLock) {
         this.allowLock = allowLock;
     }
 
@@ -93,4 +93,5 @@ public class Storage {
     public void setAdmin(String admin) {
         this.admin = admin;
     }
+
 }

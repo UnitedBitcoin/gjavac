@@ -750,12 +750,9 @@ class TokenContract : UvmContract<Storage>() {
     }
 
     fun on_deposit_contract_token(arg:String){
-        var precontr = get_prev_call_frame_contract_address()
-        if(precontr == null || precontr == ""){
-            error("null precontr"+arg)
-        }
-        fast_map_set("users","test_"+precontr,arg)
+        return error("don't deposit to token contract")
     }
+
 }
 
 class TokenContractLoader {

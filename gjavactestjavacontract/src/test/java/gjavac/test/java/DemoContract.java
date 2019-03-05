@@ -18,7 +18,7 @@ class DemoContract extends UvmContract<Storage> {
         this.getStorage().precision = 0L; // int64  精度  10的幂
         this.getStorage().state = "NOT_INITED";
         this.getStorage().admin = caller_address();
-        this.getStorage().allowLock = "false";
+        this.getStorage().allowLock = false;
         this.getStorage().lockedAmounts = UvmMap.<String>create(); //users balance
         this.getStorage().allowed = UvmMap.<String>create(); //users balance
         this.getStorage().users = UvmMap.<String>create(); //users balance
@@ -40,7 +40,7 @@ class DemoContract extends UvmContract<Storage> {
     public String admin(String arg){
         return this.getStorage().admin;
     }@Offline
-    public String allowLock(String arg){
+    public Boolean allowLock(String arg){  //返回值类型使用Boolean(返回true/false)  如果返回值类型boolean(返回0/1)
         return this.getStorage().allowLock;
     }@Offline
     public String supply(String arg){
@@ -124,7 +124,6 @@ class DemoContract extends UvmContract<Storage> {
                } else {
                    UvmCoreLibs.error("name needed");
                }
-
        }
    }
 
@@ -134,10 +133,10 @@ class DemoContract extends UvmContract<Storage> {
         utils.checkState(this);
         utils.checkCallerFrameValid((UvmContract)this);
         Storage storage = (Storage)this.getStorage();
-            if (storage.getAllowLock()=="true") {
+            if (storage.getAllowLock()) {
                 UvmCoreLibs.error("this contract had been opened allowLock before");
             } else {
-                storage.setAllowLock("true");
+                storage.setAllowLock(true);
                 UvmCoreLibs.emit("AllowedLock", "");
             }
     }
@@ -464,7 +463,7 @@ class DemoContract extends UvmContract<Storage> {
         Storage var10000 = (Storage)this.getStorage();
         if (var10000 != null) {
             Storage storage = var10000;
-            if (storage.getAllowLock()=="false") {
+            if (!storage.getAllowLock()) {
                 UvmCoreLibs.error("this token contract not allow lock balance");
             } else {
                 UvmArray parsed = utils.parseAtLeastArgs(arg, 2, "arg format error, need format is integer_amount,unlockBlockNumber");
@@ -521,7 +520,7 @@ class DemoContract extends UvmContract<Storage> {
         utils.checkState(this);
         utils.checkCallerFrameValid((UvmContract)this);
 
-            if (this.getStorage().getAllowLock()=="false") {
+            if (this.getStorage().getAllowLock()==false) {
                 UvmCoreLibs.error("this token contract not allow lock balance");
             } else {
                 Object lockedStr = UvmCoreLibs.fast_map_get("lockedAmounts", unlockAddress);
@@ -565,6 +564,7 @@ class DemoContract extends UvmContract<Storage> {
             return "";
         }
     }
+
 
 
 
