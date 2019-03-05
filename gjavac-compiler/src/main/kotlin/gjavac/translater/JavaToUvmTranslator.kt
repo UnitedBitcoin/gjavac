@@ -268,7 +268,7 @@ open class JavaToUvmTranslator {
     }
 
     fun makeJmpToInstruction(proto: UvmProto, i: Instruction, opName: String,
-                             toJmpToInst: Instruction, result: MutableList<UvmInstruction>, commentPrefix: String, onlyNeedResultCount: Boolean) {
+                             toJmpToInst: Instruction, result: MutableList<UvmInstruction>, commentPrefix: String, onlyNeedResultCount: Boolean,needTranslateResult2Boolean:Boolean) {
         // 满足条件，跳转到目标指令
         // 在要跳转的目标指令的前面增加 label:
         var jmpLabel = proto.name + "_to_dest_" + opName + "_" + i.offset;
@@ -300,7 +300,7 @@ open class JavaToUvmTranslator {
                 var oldNotAffectMode = proto.inNotAffectMode;
                 proto.inNotAffectMode = true;
                 var uvmInsts = translateJvmInstruction(proto, proto.method!!.code[j],
-                        "", true) // 因为可能有嵌套情况，这里只需要获取准确的指令数量不需要准确的指令内容
+                        "", true,needTranslateResult2Boolean) // 因为可能有嵌套情况，这里只需要获取准确的指令数量不需要准确的指令内容
                 proto.inNotAffectMode = oldNotAffectMode;
                 var notEmptyUvmInstsCount = (uvmInsts.filter
                 {
@@ -357,7 +357,7 @@ open class JavaToUvmTranslator {
     }
 
     fun makeArithmeticInstructions(proto: UvmProto, uvmOpName: String, i: Instruction, result: MutableList<UvmInstruction>,
-                                   commentPrefix: String, convertResultTypeBoolIfInt: Boolean) {
+                                   commentPrefix: String, convertResultBool2Javaboolean: Boolean) {
         result.add(proto.makeEmptyInstruction(i.toString()))
         proto.internConstantValue(1)
 
@@ -372,28 +372,8 @@ open class JavaToUvmTranslator {
         // 执行算术操作符，结果存入tmp2
         result.add(proto.makeInstructionLine(uvmOpName + " %" + proto.tmp2StackTopSlotIndex + " %" + arg1SlotIndex + " %" + arg2SlotIndex + commentPrefix, i))
 
-        if (convertResultTypeBoolIfInt) {
-            // 判断是否是0，如果是就是false，需要使用jmp
-            proto.internConstantValue(0)
-            proto.internConstantValue(true)
-            proto.internConstantValue(false)
-            result.add(proto.makeInstructionLine("loadk %" + proto.tmp1StackTopSlotIndex + " const false" + commentPrefix, i))
-            // if tmp2==0 then pc++
-            result.add(proto.makeInstructionLine("eq 0 %" + proto.tmp2StackTopSlotIndex + " const 0" + commentPrefix, i))
-
-            var labelWhenTrue = proto.name + "_true_" + i.offset;
-            var labelWhenFalse = proto.name + "_false_" + i.offset;
-            labelWhenTrue = proto.internNeedLocationLabel(
-                    2 + proto.notEmptyCodeInstructions().size + notEmptyUvmInstructionsCountInList(result), labelWhenTrue)
-
-            result.add(proto.makeInstructionLine("jmp 1 $" + labelWhenTrue + commentPrefix, i))
-            labelWhenFalse =
-                    proto.internNeedLocationLabel(
-                            2 + proto.notEmptyCodeInstructions().size + notEmptyUvmInstructionsCountInList(result), labelWhenFalse)
-            result.add(proto.makeInstructionLine("jmp 1 $" + labelWhenFalse + commentPrefix, i))
-
-            result.add(proto.makeInstructionLine("loadk %" + proto.tmp1StackTopSlotIndex + " const true" + commentPrefix, i))
-            result.add(proto.makeInstructionLine("move %" + proto.tmp2StackTopSlotIndex + " %" + proto.tmp1StackTopSlotIndex + commentPrefix, i))
+        if (convertResultBool2Javaboolean) {
+            convertLuaBool2Javaboolean(proto,proto.tmp2StackTopSlotIndex,i,commentPrefix,result)
         }
 
         // 把add结果存入eval stack
@@ -539,7 +519,7 @@ open class JavaToUvmTranslator {
      * 单元操作符转换成指令
      */
     fun makeSingleArithmeticInstructions(proto: UvmProto, uvmOpName: String, i: Instruction, result: MutableList<UvmInstruction>,
-                                         commentPrefix: String, convertResultTypeBoolIfInt: Boolean) {
+                                         commentPrefix: String, convertResultBool2Javaboolean: Boolean) {
         result.add(proto.makeEmptyInstruction(i.toString()))
         proto.internConstantValue(1)
         val arg1SlotIndex = proto.tmp3StackTopSlotIndex + 1 // top
@@ -549,30 +529,10 @@ open class JavaToUvmTranslator {
         // 执行算术操作符，结果存入tmp2
         result.add(proto.makeInstructionLine(uvmOpName + " %" + proto.tmp2StackTopSlotIndex + " %" + arg1SlotIndex + commentPrefix, i))
 
-        if (convertResultTypeBoolIfInt) {
+        if (convertResultBool2Javaboolean) {
             // 判断是否是0，如果是就是false，需要使用jmp
-            proto.internConstantValue(0)
-            proto.internConstantValue(true)
-            proto.internConstantValue(false)
-            result.add(proto.makeInstructionLine("loadk %" + proto.tmp1StackTopSlotIndex + " const false" + commentPrefix, i))
-            // if tmp2==0 then pc++
-            result.add(proto.makeInstructionLine("eq 0 %" + proto.tmp2StackTopSlotIndex + " const 0" + commentPrefix, i))
-
-            var labelWhenTrue = proto.name + "_true_" + i.offset;
-            var labelWhenFalse = proto.name + "_false_" + i.offset;
-            labelWhenTrue =
-                    proto.internNeedLocationLabel(
-                            2 + proto.notEmptyCodeInstructions().size + notEmptyUvmInstructionsCountInList(result), labelWhenTrue)
-
-            result.add(proto.makeInstructionLine("jmp 1 $" + labelWhenTrue + commentPrefix, i))
-            labelWhenFalse =
-                    proto.internNeedLocationLabel(
-                            2 + proto.notEmptyCodeInstructions().size + notEmptyUvmInstructionsCountInList(result), labelWhenFalse)
-            result.add(proto.makeInstructionLine("jmp 1 $" + labelWhenFalse + commentPrefix, i))
-
-            result.add(proto.makeInstructionLine("loadk %" + proto.tmp1StackTopSlotIndex + " const true" + commentPrefix, i))
-            result.add(proto.makeInstructionLine("move %" + proto.tmp2StackTopSlotIndex + " %" + proto.tmp1StackTopSlotIndex + commentPrefix, i))
-        }
+            convertLuaBool2Javaboolean(proto,proto.tmp2StackTopSlotIndex,i,commentPrefix,result)
+            }
 
         // 把add结果存入eval stack
         pushIntoEvalStackTopSlot(proto,proto.tmp2StackTopSlotIndex,i,result,commentPrefix)
@@ -658,7 +618,6 @@ open class JavaToUvmTranslator {
     fun convertInt2LuaBoolean(proto: UvmProto, slotresult:Int, i: Instruction,commentPrefix: String,result:MutableList<UvmInstruction>){
         proto.internConstantValue(0)
         proto.internConstantValue(false)
-        proto.internConstantValue(1)
         proto.internConstantValue(true)
 
         val slotLuaBool = proto.tmpMaxStackTopSlotIndex - 1
@@ -667,7 +626,7 @@ open class JavaToUvmTranslator {
 
         result.add(proto.makeInstructionLine("loadk %" + slotLuaBool + " const false" + commentPrefix, i))
         result.add(proto.makeInstructionLine("loadk %" + slotTemp + " const 0" + commentPrefix, i))
-        // if slotresult==false then pc++
+        // if slotresult==false then pc++  // 判断是否是0，如果是就是false，需要使用jmp
         result.add(proto.makeInstructionLine("eq 0 %" + slotresult + " %" + slotTemp + commentPrefix, i))
 
         var labelWhenTrue = proto.name + "_true_" + i.offset;
@@ -685,7 +644,7 @@ open class JavaToUvmTranslator {
         result.add(proto.makeInstructionLine("move %" + slotresult + " %" + slotLuaBool + commentPrefix, i))
     }
 
-    fun translateJvmInstruction(proto: UvmProto, i: Instruction, commentPrefix: String, onlyNeedResultCount: Boolean ): MutableList<UvmInstruction> {
+    fun translateJvmInstruction(proto: UvmProto, i: Instruction, commentPrefix: String, onlyNeedResultCount: Boolean, needTranslateResult2Boolean :Boolean ): MutableList<UvmInstruction> {
         // TODO
         val result: MutableList<UvmInstruction> = mutableListOf()
         when (i.opCode) {
@@ -780,6 +739,10 @@ open class JavaToUvmTranslator {
                 if (hasReturn) {
 
                     popFromEvalStackToSlot(proto,proto.tmp1StackTopSlotIndex,i,result,commentPrefix)
+                    if (needTranslateResult2Boolean)
+                    {
+                        convertInt2LuaBoolean(proto, proto.tmp1StackTopSlotIndex, i, commentPrefix, result);
+                    }
 
                     result.add(proto.makeInstructionLine("return %" + proto.tmp1StackTopSlotIndex + " " + (returnCount + 1) + commentPrefix, i))
                 }
@@ -1697,7 +1660,7 @@ open class JavaToUvmTranslator {
                 // 把调用结果存回eval-stack
                 if (hasReturn) {
                     // 调用结果在tmp3
-                    if(resultBool2IntValue&&isExternalMethod){
+                    if(resultBool2IntValue){
                         convertLuaBool2Javaboolean(proto,proto.tmp3StackTopSlotIndex,i,commentPrefix,result)
                         }
 
@@ -1717,7 +1680,7 @@ open class JavaToUvmTranslator {
                 if (toJmpToInst == null) {
                     throw GjavacException("goto dest line not found " + i)
                 }
-                makeJmpToInstruction(proto, i, "goto", toJmpToInst, result, commentPrefix, onlyNeedResultCount)
+                makeJmpToInstruction(proto, i, "goto", toJmpToInst, result, commentPrefix, onlyNeedResultCount,needTranslateResult2Boolean)
             }
             Opcodes.TABLESWITCH -> {
                 // TODO
@@ -1808,7 +1771,7 @@ open class JavaToUvmTranslator {
                     else -> throw GjavacException("not supported compare type " + opType)
                 }
                 // 满足相反的条件，跳转到目标指令
-                makeJmpToInstruction(proto, i, i.opCodeName(), toJmpToInst, result, commentPrefix, onlyNeedResultCount)
+                makeJmpToInstruction(proto, i, i.opCodeName(), toJmpToInst, result, commentPrefix, onlyNeedResultCount,needTranslateResult2Boolean)
             }
             Opcodes.INSTANCEOF -> {
                 makeLoadConstInst(proto, i, result, proto.tmp1StackTopSlotIndex, true, commentPrefix)
@@ -1888,11 +1851,11 @@ open class JavaToUvmTranslator {
         proto.maxCallStackSize = 0;
 
         var lastLinenumber = 0;
-        //var needTranslateResult2Boolean = false;
-        //if(method.signature?.returnType?.signature == "Z") //return boolean
-        //{
-        //    needTranslateResult2Boolean = true;
-        //}
+        var needTranslateResult2Boolean = false;
+        if(method.signature?.returnType?.signature == "Z") //return boolean
+        {
+            needTranslateResult2Boolean = true;
+        }
 
         var tempi = 0
         var params = proto.sizeP
@@ -1937,7 +1900,7 @@ open class JavaToUvmTranslator {
             // commentPrefix += dotnetOpStr;
             // 关于java的evaluation stack在uvm字节码虚拟机中的实现方式
             // 维护一个evaluation stack的局部变量,，每个proto入口处清空它
-            var uvmInstructions = translateJvmInstruction(proto, i, commentPrefix, false)
+            var uvmInstructions = translateJvmInstruction(proto, i, commentPrefix, false,needTranslateResult2Boolean)
             for (uvmInst in uvmInstructions) {
                 proto.addInstruction(uvmInst)
             }

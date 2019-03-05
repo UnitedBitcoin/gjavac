@@ -40,9 +40,7 @@ class DemoContract extends UvmContract<Storage> {
     public String admin(String arg){
         return this.getStorage().admin;
     }@Offline
-    public Boolean allowLock(String arg){  //返回值类型使用Boolean(返回true/false)  如果返回值类型boolean(返回0/1)
-        return this.getStorage().allowLock;
-    }@Offline
+    public Boolean allowLock(String arg){ return this.getStorage().allowLock; }@Offline
     public String supply(String arg){
         return this.getStorage().supply;
     }
